@@ -1,0 +1,68 @@
+---
+import "../styles/global.css";
+
+const posts = [
+  {
+    title: "Designing a serverless blog platform",
+    date: "2026-08-11",
+    summary:
+      "Notes on the production architecture behind this blog: Astro, S3, CloudFront, Jenkins, Terraform, and AWS IAM.",
+  },
+];
+
+const topics = ["AWS", "Serverless", "Astro", "Terraform", "Jenkins"];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Technical notes by Mateusz Rembiasz on cloud infrastructure, serverless systems, and operations."
+    />
+    <title>Mateusz Rembiasz Blog</title>
+  </head>
+  <body>
+    <main class="container">
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="/" aria-current="page">Blog</a>
+        <a href="https://mrembiasz.pl">Home</a>
+      </nav>
+
+      <h1 class="name">Mateusz Rembiasz Blog</h1>
+      <p class="status">Cloud / Serverless / Operations</p>
+      <p class="bio">
+        Production notes on AWS, Kubernetes, infrastructure as code, CI/CD, and
+        the tradeoffs behind small systems that should stay understandable.
+      </p>
+
+      <section class="section" aria-labelledby="topics-title">
+        <p id="topics-title" class="section-label">Topics</p>
+        <div class="tags">
+          {topics.map((topic) => <span class="tag">{topic}</span>)}
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="posts-title">
+        <p id="posts-title" class="section-label">Latest</p>
+        <div class="posts">
+          {
+            posts.map((post) => (
+              <article class="post">
+                <div class="post-header">
+                  <h2>{post.title}</h2>
+                  <time datetime={post.date}>{post.date}</time>
+                </div>
+                <p>{post.summary}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <p class="footer">Built with Astro. Served from AWS.</p>
+    </main>
+  </body>
+</html>
