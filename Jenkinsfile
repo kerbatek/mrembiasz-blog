@@ -17,10 +17,15 @@ spec:
   }
 
   stages {
-    stage('Build') {
+    stage('Install dependencies') {
       steps {
         sh 'node --version'
         sh 'npm ci'
+      }
+    }
+
+    stage('Build Astro') {
+      steps {
         sh 'npm run build'
       }
     }
