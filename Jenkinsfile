@@ -33,6 +33,10 @@ spec:
 
   post {
     success {
+      script {
+        currentBuild.description = 'Astro build passed; dist artifact archived.'
+      }
+      echo 'Astro build passed; dist artifact archived.'
       archiveArtifacts artifacts: 'dist/**', fingerprint: true
     }
   }
