@@ -1,6 +1,7 @@
 locals {
-  domain_name  = "blog.mrembiasz.pl"
-  s3_origin_id = "s3-mrembiasz-blog"
+  caching_optimized_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  domain_name                 = "blog.mrembiasz.pl"
+  s3_origin_id                = "s3-mrembiasz-blog"
   tags = {
     Project = "mrembiasz-blog"
   }
@@ -12,10 +13,6 @@ resource "aws_cloudfront_origin_access_control" "site" {
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
-}
-
-data "aws_cloudfront_cache_policy" "caching_optimized" {
-  name = "Managed-CachingOptimized"
 }
 
 resource "aws_cloudfront_function" "rewrite_directory_index" {
@@ -61,7 +58,7 @@ resource "aws_cloudfront_distribution" "site" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
-    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
+    cache_policy_id        = local.caching_optimized_policy_id
 
     function_association {
       event_type   = "viewer-request"
