@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   build: {
-    inlineStylesheets: "always",
+    inlineStylesheets: "never",
   },
   output: "static",
 });
