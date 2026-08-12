@@ -17,15 +17,9 @@ spec:
   }
 
   stages {
-    stage('Install dependencies') {
-      steps {
-        sh 'node --version'
-        sh 'npm ci'
-      }
-    }
-
     stage('Build Astro') {
       steps {
+        sh 'npm ci'
         sh 'npm run build'
       }
     }
@@ -33,7 +27,6 @@ spec:
 
   post {
     success {
-      echo 'Astro build passed; dist artifact archived.'
       archiveArtifacts artifacts: 'dist/**', fingerprint: true
     }
   }
