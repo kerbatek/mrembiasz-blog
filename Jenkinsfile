@@ -27,7 +27,6 @@ spec:
     stage('Build Astro') {
       steps {
         sh 'npm run build'
-        sh 'echo "intentional failure to test GitHub status" && exit 1'
       }
     }
   }
@@ -35,15 +34,7 @@ spec:
   post {
     success {
       echo 'Astro build passed; dist artifact archived.'
-      githubNotify context: 'astro/build',
-        description: 'Astro build passed; dist artifact archived.',
-        status: 'SUCCESS'
       archiveArtifacts artifacts: 'dist/**', fingerprint: true
-    }
-    failure {
-      githubNotify context: 'astro/build',
-        description: 'Astro build failed.',
-        status: 'FAILURE'
     }
   }
 }
