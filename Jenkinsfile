@@ -43,6 +43,7 @@ spec:
               sh 'terraform fmt -check'
               sh 'terraform validate'
               sh 'terraform plan -input=false -out=tfplan'
+              sh 'terraform show -no-color tfplan > tfplan.txt'
             }
           }
         }
@@ -67,7 +68,7 @@ spec:
 
   post {
     success {
-      archiveArtifacts artifacts: 'dist/**', fingerprint: true
+      archiveArtifacts artifacts: 'dist/**, terraform/tfplan, terraform/tfplan.txt', fingerprint: true
     }
   }
 }
