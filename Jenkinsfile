@@ -12,8 +12,18 @@ spec:
       command:
         - cat
       tty: true
+    - name: terraform
+      image: hashicorp/terraform:1.13
+      command:
+        - cat
+      tty: true
 '''
     }
+  }
+
+  environment {
+    AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
+    TF_IN_AUTOMATION = 'true'
   }
 
   stages {
@@ -21,6 +31,36 @@ spec:
       steps {
         sh 'npm ci'
         sh 'npm run build'
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        container('terraform') {
+          withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+            dir('terraform') {
+              sh 'terraform init -input=false'
+              sh 'terraform fmt -check'
+              sh 'terraform validate'
+              sh 'terraform plan -input=false -out=tfplan'
+            }
+          }
+        }
+      }
+    }
+
+    stage('Terraform Apply') {
+      when {
+        branch 'main'
+      }
+      steps {
+        container('terraform') {
+          withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+            dir('terraform') {
+              sh 'terraform apply -input=false tfplan'
+            }
+          }
+        }
       }
     }
   }
