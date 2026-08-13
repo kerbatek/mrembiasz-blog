@@ -28,6 +28,10 @@ Lint Frontend                 -> npm run lint:frontend
 Build Astro                   -> npm run build
 ```
 
+Each Jenkins stage publishes a GitHub check run with the stage name through the
+Jenkins Checks API and GitHub Checks plugins. The check links back to the
+Jenkins build URL and reports the failing stage directly in GitHub.
+
 `lint:frontend` runs:
 
 - Prettier formatting checks for frontend source and config files
@@ -106,6 +110,10 @@ request flow, allows squash merge, and requires the Jenkins status check:
 ```text
 continuous-integration/jenkins/pr-head
 ```
+
+Stage-level GitHub Checks are published for readability, but the required merge
+gate remains the Jenkins multibranch status check above. Keep it that way until
+the stage-level check names are stable across PR and branch builds.
 
 The repository is operated as a solo-maintained public repository. GitHub
 settings were checked with GitHub CLI and show:

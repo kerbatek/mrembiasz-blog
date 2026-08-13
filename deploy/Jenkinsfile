@@ -1,3 +1,30 @@
+def githubCheck(String name, Closure body) {
+  publishChecks name: name,
+    status: 'IN_PROGRESS',
+    title: name,
+    summary: 'Running',
+    detailsURL: env.BUILD_URL
+
+  try {
+    body.call()
+    publishChecks name: name,
+      status: 'COMPLETED',
+      conclusion: 'SUCCESS',
+      title: name,
+      summary: 'Passed',
+      detailsURL: env.BUILD_URL
+  } catch (error) {
+    publishChecks name: name,
+      status: 'COMPLETED',
+      conclusion: 'FAILURE',
+      title: name,
+      summary: 'Failed',
+      text: error.getMessage(),
+      detailsURL: env.BUILD_URL
+    throw error
+  }
+}
+
 pipeline {
   agent {
     kubernetes {
@@ -17,25 +44,41 @@ pipeline {
   stages {
     stage('Install Frontend Dependencies') {
       steps {
-        sh 'npm ci'
+        script {
+          githubCheck('Install Frontend Dependencies') {
+            sh 'npm ci'
+          }
+        }
       }
     }
 
     stage('Scan Frontend Packages') {
       steps {
-        sh 'npm run scan:frontend:packages'
+        script {
+          githubCheck('Scan Frontend Packages') {
+            sh 'npm run scan:frontend:packages'
+          }
+        }
       }
     }
 
     stage('Lint Frontend') {
       steps {
-        sh 'npm run lint:frontend'
+        script {
+          githubCheck('Lint Frontend') {
+            sh 'npm run lint:frontend'
+          }
+        }
       }
     }
 
     stage('Build Astro') {
       steps {
-        sh 'npm run build'
+        script {
+          githubCheck('Build Astro') {
+            sh 'npm run build'
+          }
+        }
       }
     }
 
@@ -46,7 +89,11 @@ pipeline {
       steps {
         container('terraform') {
           withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-            sh 'deploy/scripts/terraform-plan.sh'
+            script {
+              githubCheck('Terraform Plan') {
+                sh 'deploy/scripts/terraform-plan.sh'
+              }
+            }
           }
         }
       }
@@ -62,7 +109,11 @@ pipeline {
       steps {
         container('terraform') {
           withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-            sh 'deploy/scripts/terraform-apply.sh'
+            script {
+              githubCheck('Terraform Apply') {
+                sh 'deploy/scripts/terraform-apply.sh'
+              }
+            }
           }
         }
       }
@@ -78,7 +129,11 @@ pipeline {
       steps {
         container('aws') {
           withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-            sh 'deploy/scripts/deploy-static-site.sh'
+            script {
+              githubCheck('Deploy Static Site') {
+                sh 'deploy/scripts/deploy-static-site.sh'
+              }
+            }
           }
         }
       }
