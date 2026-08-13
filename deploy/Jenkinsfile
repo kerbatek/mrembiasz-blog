@@ -1,3 +1,6 @@
+def PLAN_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
+def DEPLOY_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
+
 def githubCheck(String name, Closure body) {
   publishChecks name: name,
     status: 'IN_PROGRESS',
@@ -45,6 +48,28 @@ def githubCheck(String name, Closure body) {
   }
 }
 
+def checkedSh(Map args) {
+  githubCheck(args.name) {
+    sh args.exec
+  }
+}
+
+def withAwsRole(String containerName, String roleArn, Closure body) {
+  container(containerName) {
+    withEnv(["AWS_ROLE_ARN=${roleArn}"]) {
+      withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+        body.call()
+      }
+    }
+  }
+}
+
+def checkedAwsSh(Map args) {
+  withAwsRole(args.container, args.role) {
+    checkedSh(name: args.name, exec: args.exec)
+  }
+}
+
 pipeline {
   agent {
     kubernetes {
@@ -69,9 +94,7 @@ pipeline {
             stage('Install Frontend Dependencies') {
               steps {
                 script {
-                  githubCheck('Install Frontend Dependencies') {
-                    sh 'npm ci'
-                  }
+                  checkedSh(name: 'Install Frontend Dependencies', exec: 'npm ci')
                 }
               }
             }
@@ -79,9 +102,7 @@ pipeline {
             stage('Scan Frontend Packages') {
               steps {
                 script {
-                  githubCheck('Scan Frontend Packages') {
-                    sh 'npm run scan:frontend:packages'
-                  }
+                  checkedSh(name: 'Scan Frontend Packages', exec: 'npm run scan:frontend:packages')
                 }
               }
             }
@@ -89,9 +110,7 @@ pipeline {
             stage('Lint Frontend') {
               steps {
                 script {
-                  githubCheck('Lint Frontend') {
-                    sh 'npm run lint:frontend'
-                  }
+                  checkedSh(name: 'Lint Frontend', exec: 'npm run lint:frontend')
                 }
               }
             }
@@ -99,9 +118,7 @@ pipeline {
             stage('Build Astro') {
               steps {
                 script {
-                  githubCheck('Build Astro') {
-                    sh 'npm run build'
-                  }
+                  checkedSh(name: 'Build Astro', exec: 'npm run build')
                 }
               }
             }
@@ -109,20 +126,14 @@ pipeline {
         }
 
         stage('Terraform Plan') {
-          environment {
-            AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
-          }
           steps {
-            container('terraform') {
-              withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-                script {
-                  githubCheck('Terraform Plan') {
-                    sh 'deploy/scripts/terraform-plan.sh'
-                    [
-                      title: readFile('terraform/tfplan-summary.txt').trim(),
-                      summary: readFile('terraform/tfplan-summary.txt').trim()
-                    ]
-                  }
+            script {
+              withAwsRole('terraform', PLAN_ROLE) {
+                githubCheck('Terraform Plan') {
+                  sh 'deploy/scripts/terraform-plan.sh'
+                  [
+                    title: readFile('terraform/tfplan-summary.txt').trim()
+                  ]
                 }
               }
             }
@@ -131,55 +142,41 @@ pipeline {
       }
     }
 
-    stage('Terraform Apply') {
+    stage('Release') {
       when {
         branch 'main'
       }
-      environment {
-        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
-      }
-      steps {
-        container('terraform') {
-          withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+      stages {
+        stage('Terraform Apply') {
+          steps {
             script {
-              githubCheck('Terraform Apply') {
-                sh 'deploy/scripts/terraform-apply.sh'
-              }
+              checkedAwsSh(
+                name: 'Terraform Apply',
+                container: 'terraform',
+                role: DEPLOY_ROLE,
+                exec: 'deploy/scripts/terraform-apply.sh'
+              )
             }
           }
         }
-      }
-    }
 
-    stage('Deploy Static Site') {
-      when {
-        branch 'main'
-      }
-      environment {
-        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
-      }
-      steps {
-        container('aws') {
-          withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+        stage('Deploy Static Site') {
+          steps {
             script {
-              githubCheck('Deploy Static Site') {
-                sh 'deploy/scripts/deploy-static-site.sh'
-              }
+              checkedAwsSh(
+                name: 'Deploy Static Site',
+                container: 'aws',
+                role: DEPLOY_ROLE,
+                exec: 'deploy/scripts/deploy-static-site.sh'
+              )
             }
           }
         }
-      }
-    }
 
-    stage('Smoke Test Website') {
-      when {
-        branch 'main'
-      }
-      steps {
-        container('node') {
-          script {
-            githubCheck('Smoke Test Website') {
-              sh 'deploy/scripts/smoke-test-site.sh'
+        stage('Smoke Test Website') {
+          steps {
+            script {
+              checkedSh(name: 'Smoke Test Website', exec: 'deploy/scripts/smoke-test-site.sh')
             }
           }
         }
