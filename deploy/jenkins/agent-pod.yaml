@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: node
+      image: node:24-alpine
+      command:
+        - cat
+      tty: true
+    - name: terraform
+      image: hashicorp/terraform:1.13
+      command:
+        - cat
+      tty: true
+    - name: aws
+      image: amazon/aws-cli:2.28.21
+      command:
+        - cat
+      tty: true
