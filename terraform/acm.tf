@@ -8,3 +8,8 @@ resource "aws_acm_certificate" "site" {
     create_before_destroy = true
   }
 }
+
+resource "aws_acm_certificate_validation" "site" {
+  provider        = aws.use1
+  certificate_arn = aws_acm_certificate.site.arn
+}
