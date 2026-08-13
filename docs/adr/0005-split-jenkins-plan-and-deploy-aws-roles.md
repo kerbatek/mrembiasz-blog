@@ -40,6 +40,31 @@ The Jenkinsfile assumes the plan role for `Terraform Plan` and the deploy role
 only for `Terraform Apply` and `Deploy Static Site`, both guarded by
 `when { branch 'main' }`.
 
+Protect `main` in GitHub because it is part of the AWS deployment boundary. The
+repository uses an active GitHub ruleset named `protect main` for the default
+branch. It requires pull request flow, one approving review, CODEOWNERS review,
+and the Jenkins check before merge:
+
+```text
+continuous-integration/jenkins/pr-head
+```
+
+Repository-wide CODEOWNERS is set to:
+
+```text
+* @kerbatek
+```
+
+GitHub evaluates CODEOWNERS from the protected base branch, so a pull request
+that changes `.github/CODEOWNERS` still requires approval from the owner defined
+on `main`.
+
+PR Jenkinsfile changes still run with the plan role, so the plan role must stay
+non-destructive. A malicious PR can alter CI behavior, but it cannot assume the
+deploy role unless that change reaches protected `main`. The destructive AWS
+boundary is enforced by the deploy role trust policy plus GitHub ruleset and
+CODEOWNERS approval.
+
 ## Rationale
 
 This keeps review-time credentials different from production mutation
@@ -55,6 +80,10 @@ because `terraform apply` must serialize changes.
 
 The Jenkins platform repository must keep the role trust policies aligned with
 the Jenkins job URL subjects.
+
+GitHub branch protection must stay enabled for `main`. If it is removed, a
+direct push to `main` could trigger the Jenkins subject that is allowed to
+assume the deploy role.
 
 The plan role needs enough read permissions for Terraform provider refresh and
 plan generation, but it must not receive S3 object writes to the site bucket,

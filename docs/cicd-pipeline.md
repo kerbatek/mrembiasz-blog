@@ -42,6 +42,20 @@ arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy
 `Deploy Static Site` also runs only on `main` with the deploy role. It syncs
 `dist/` to the private S3 site bucket and creates a CloudFront invalidation.
 
+Jenkins disables concurrent builds for this pipeline. That keeps Terraform
+apply, S3 sync, and CloudFront invalidation serialized for this repository.
+
+## DNS and certificate dependency
+
+DNS for `blog.mrembiasz.pl` is managed outside AWS. Terraform requests and
+tracks the CloudFront ACM certificate in `us-east-1`, but the ACM validation
+CNAME and the final `blog.mrembiasz.pl` hostname record must be maintained in
+the external DNS provider.
+
+During first setup or certificate replacement, `terraform apply` waits for ACM
+validation. If the external DNS record is missing or stale, the apply will wait
+until Terraform times out.
+
 ## AWS role boundary
 
 The Jenkins platform repository owns the OIDC provider and role trust policies.
@@ -60,6 +74,37 @@ mrembiasz-blog-jenkins-deploy
 PR and branch builds can build Astro and run Terraform plan, but they cannot
 assume the deploy role. Only the `main` Jenkins subject can mutate AWS
 infrastructure or publish the website.
+
+## GitHub merge boundary
+
+Because the deploy role trusts only the Jenkins `main` subject, GitHub branch
+protection is part of the AWS security boundary. A change should not reach
+`main` unless the protected branch rules allow it.
+
+This repository uses an active GitHub ruleset named `protect main` for the
+default branch. It blocks deletion and non-fast-forward updates, requires pull
+request flow, requires one approving review, requires CODEOWNERS review,
+allows squash merge, and requires the Jenkins status check:
+
+```text
+continuous-integration/jenkins/pr-head
+```
+
+Repository-wide ownership is declared in `.github/CODEOWNERS`:
+
+```text
+* @kerbatek
+```
+
+GitHub evaluates CODEOWNERS from the protected base branch. A pull request can
+propose changes to `.github/CODEOWNERS`, but it still needs approval from the
+owner defined on `main` before that change can affect future pull requests.
+
+PR Jenkinsfile changes still run with the plan role, so the plan role must stay
+non-destructive. A malicious PR can alter CI behavior, but it cannot assume the
+deploy role unless that change reaches protected `main`. The destructive AWS
+boundary is enforced by the deploy role trust policy plus GitHub ruleset and
+CODEOWNERS approval.
 
 ## Platform permissions
 

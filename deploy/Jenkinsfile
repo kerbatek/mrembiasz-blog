@@ -10,6 +10,10 @@ pipeline {
     TF_IN_AUTOMATION = 'true'
   }
 
+  options {
+    disableConcurrentBuilds()
+  }
+
   stages {
     stage('Build Astro') {
       steps {
