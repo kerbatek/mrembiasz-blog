@@ -10,16 +10,17 @@ The pipeline runs on ephemeral Kubernetes agent Pods defined in
 Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
-  -> Astro build
-  -> Terraform plan
+  -> frontend checks/build and Terraform plan in parallel
   -> Terraform apply on main
   -> S3 sync on main
   -> CloudFront invalidation on main
+  -> smoke test on main
 ```
 
 ## Stages
 
-Frontend stages run in the `node` container:
+Validation runs in parallel. Frontend stages run sequentially in the `node`
+container:
 
 ```text
 Install Frontend Dependencies -> npm ci
@@ -44,7 +45,8 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`Terraform Plan` runs in the `terraform` container and assumes:
+`Terraform Plan` runs in parallel with the frontend path in the `terraform`
+container and assumes:
 
 ```text
 arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan

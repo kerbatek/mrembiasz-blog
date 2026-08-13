@@ -62,61 +62,68 @@ pipeline {
   }
 
   stages {
-    stage('Install Frontend Dependencies') {
-      steps {
-        script {
-          githubCheck('Install Frontend Dependencies') {
-            sh 'npm ci'
+    stage('Validate') {
+      parallel {
+        stage('Frontend') {
+          stages {
+            stage('Install Frontend Dependencies') {
+              steps {
+                script {
+                  githubCheck('Install Frontend Dependencies') {
+                    sh 'npm ci'
+                  }
+                }
+              }
+            }
+
+            stage('Scan Frontend Packages') {
+              steps {
+                script {
+                  githubCheck('Scan Frontend Packages') {
+                    sh 'npm run scan:frontend:packages'
+                  }
+                }
+              }
+            }
+
+            stage('Lint Frontend') {
+              steps {
+                script {
+                  githubCheck('Lint Frontend') {
+                    sh 'npm run lint:frontend'
+                  }
+                }
+              }
+            }
+
+            stage('Build Astro') {
+              steps {
+                script {
+                  githubCheck('Build Astro') {
+                    sh 'npm run build'
+                  }
+                }
+              }
+            }
           }
         }
-      }
-    }
 
-    stage('Scan Frontend Packages') {
-      steps {
-        script {
-          githubCheck('Scan Frontend Packages') {
-            sh 'npm run scan:frontend:packages'
+        stage('Terraform Plan') {
+          environment {
+            AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
           }
-        }
-      }
-    }
-
-    stage('Lint Frontend') {
-      steps {
-        script {
-          githubCheck('Lint Frontend') {
-            sh 'npm run lint:frontend'
-          }
-        }
-      }
-    }
-
-    stage('Build Astro') {
-      steps {
-        script {
-          githubCheck('Build Astro') {
-            sh 'npm run build'
-          }
-        }
-      }
-    }
-
-    stage('Terraform Plan') {
-      environment {
-        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
-      }
-      steps {
-        container('terraform') {
-          withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-            script {
-              githubCheck('Terraform Plan') {
-                sh 'deploy/scripts/terraform-plan.sh'
-                [
-                  title: readFile('terraform/tfplan-summary.txt').trim(),
-                  summary: readFile('terraform/tfplan-summary.txt').trim(),
-                  text: "```text\n${readFile('terraform/tfplan.txt').take(60000)}\n```"
-                ]
+          steps {
+            container('terraform') {
+              withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
+                script {
+                  githubCheck('Terraform Plan') {
+                    sh 'deploy/scripts/terraform-plan.sh'
+                    [
+                      title: readFile('terraform/tfplan-summary.txt').trim(),
+                      summary: readFile('terraform/tfplan-summary.txt').trim()
+                    ]
+                  }
+                }
               }
             }
           }

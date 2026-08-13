@@ -17,8 +17,8 @@ npm run scan:frontend:packages
 npm run build
 ```
 
-Jenkins runs the same frontend checks before Terraform plan/apply and static
-site deployment.
+Jenkins runs the frontend checks and Terraform plan in parallel before
+main-only Terraform apply and static site deployment.
 
 ## Documentation
 
