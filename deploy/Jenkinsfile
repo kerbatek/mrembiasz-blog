@@ -15,9 +15,9 @@ pipeline {
   }
 
   stages {
-    stage('Build Astro') {
+    stage('Frontend CI') {
       steps {
-        sh 'deploy/scripts/build-astro.sh'
+        sh 'deploy/scripts/frontend-ci.sh'
       }
     }
 

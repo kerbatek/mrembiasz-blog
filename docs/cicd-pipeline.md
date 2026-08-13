@@ -19,8 +19,26 @@ Git push or pull request
 
 ## Stages
 
-`Build Astro` runs in the `node` container and executes
-`deploy/scripts/build-astro.sh`.
+`Frontend CI` runs in the `node` container and executes
+`deploy/scripts/frontend-ci.sh`.
+
+The build script installs dependencies, runs frontend checks, then builds the
+static site:
+
+```text
+npm ci
+npm run lint:frontend
+npm run build
+```
+
+`lint:frontend` runs:
+
+- Prettier formatting checks for frontend source and config files
+- ESLint checks for JavaScript, TypeScript, and Astro code
+- `astro check` for Astro and TypeScript diagnostics
+
+ESLint is the code lint step. It catches likely bugs and unsafe or hard-to-read
+frontend code before the site is built.
 
 `Terraform Plan` runs in the `terraform` container and assumes:
 
