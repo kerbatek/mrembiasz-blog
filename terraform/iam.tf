@@ -1,3 +1,7 @@
+data "aws_iam_role" "jenkins_deploy" {
+  name = "mrembiasz-blog-jenkins-deploy"
+}
+
 resource "aws_iam_policy" "jenkins_deploy" {
   name = "mrembiasz-blog-deploy"
 
@@ -32,6 +36,6 @@ resource "aws_iam_policy" "jenkins_deploy" {
 }
 
 resource "aws_iam_role_policy_attachment" "jenkins_deploy" {
-  role       = "mrembiasz-blog-jenkins-deploy"
+  role       = data.aws_iam_role.jenkins_deploy.name
   policy_arn = aws_iam_policy.jenkins_deploy.arn
 }

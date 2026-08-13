@@ -43,7 +43,6 @@ resource "aws_cloudfront_distribution" "site" {
   aliases             = [local.domain_name]
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
-  wait_for_deployment = false
   tags                = local.tags
 
   origin {

@@ -30,6 +30,8 @@ resource "aws_s3_bucket_versioning" "site" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "cloudfront_read_site" {
   statement {
     sid     = "AllowCloudFrontRead"
@@ -48,6 +50,12 @@ data "aws_iam_policy_document" "cloudfront_read_site" {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
       values   = [aws_cloudfront_distribution.site.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
 }
