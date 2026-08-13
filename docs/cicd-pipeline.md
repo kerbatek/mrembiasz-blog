@@ -105,14 +105,16 @@ protection is part of the AWS security boundary. A change should not reach
 
 This repository uses an active GitHub ruleset named `protect main` for the
 default branch. It blocks deletion and non-fast-forward updates, requires pull
-request flow, allows squash merge, and requires the Jenkins Checks API summary
-check:
+request flow, allows squash merge, and requires only the Jenkins Checks API
+summary check:
 
 ```text
 Jenkins
 ```
 
-Stage-level GitHub Checks are also published for readability:
+That aggregate check represents the full Jenkins pipeline result, so it is the
+only required merge check. Stage-level GitHub Checks are also published for
+readability and debugging, but they are not individually required:
 
 ```text
 Install Frontend Dependencies
@@ -124,16 +126,12 @@ Terraform Apply
 Deploy Static Site
 ```
 
-The legacy GitHub Status API context should be disabled in Jenkins Branch Source
-configuration:
+The legacy GitHub Status API context is disabled in Jenkins Branch Source using
+the `Skip build status notifications` behavior:
 
 ```text
 continuous-integration/jenkins/pr-head
 ```
-
-That context is replaced by the GitHub Checks API output. Already-published
-legacy statuses remain visible on old commits because GitHub commit statuses are
-immutable for a SHA.
 
 The repository is operated as a solo-maintained public repository. GitHub
 settings were checked with GitHub CLI and show:
