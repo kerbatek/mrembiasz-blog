@@ -13,6 +13,7 @@ npm run dev
 
 ```sh
 npm run lint:frontend
+npm run scan:frontend:packages
 npm run build
 ```
 

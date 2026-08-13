@@ -19,16 +19,13 @@ Git push or pull request
 
 ## Stages
 
-`Frontend CI` runs in the `node` container and executes
-`deploy/scripts/frontend-ci.sh`.
-
-The build script installs dependencies, runs frontend checks, then builds the
-static site:
+Frontend stages run in the `node` container:
 
 ```text
-npm ci
-npm run lint:frontend
-npm run build
+Install Frontend Dependencies -> npm ci
+Scan Frontend Packages        -> npm run scan:frontend:packages
+Lint Frontend                 -> npm run lint:frontend
+Build Astro                   -> npm run build
 ```
 
 `lint:frontend` runs:
@@ -39,6 +36,9 @@ npm run build
 
 ESLint is the code lint step. It catches likely bugs and unsafe or hard-to-read
 frontend code before the site is built.
+
+`scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
+frontend dependency graph. CI fails on high or critical npm advisories.
 
 `Terraform Plan` runs in the `terraform` container and assumes:
 

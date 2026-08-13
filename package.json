@@ -9,6 +9,7 @@
     "lint:frontend:format": "prettier --check \"src/**/*.{astro,css,js,mjs}\" \"*.{js,mjs,json}\"",
     "lint:frontend:code": "eslint .",
     "lint:frontend:types": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "scan:frontend:packages": "npm audit --audit-level=high",
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview"
   },

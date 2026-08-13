@@ -15,9 +15,27 @@ pipeline {
   }
 
   stages {
-    stage('Frontend CI') {
+    stage('Install Frontend Dependencies') {
       steps {
-        sh 'deploy/scripts/frontend-ci.sh'
+        sh 'npm ci'
+      }
+    }
+
+    stage('Scan Frontend Packages') {
+      steps {
+        sh 'npm run scan:frontend:packages'
+      }
+    }
+
+    stage('Lint Frontend') {
+      steps {
+        sh 'npm run lint:frontend'
+      }
+    }
+
+    stage('Build Astro') {
+      steps {
+        sh 'npm run build'
       }
     }
 
