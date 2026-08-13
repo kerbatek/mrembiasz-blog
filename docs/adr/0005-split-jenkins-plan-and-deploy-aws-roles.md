@@ -42,11 +42,18 @@ only for `Terraform Apply` and `Deploy Static Site`, both guarded by
 
 Protect `main` in GitHub because it is part of the AWS deployment boundary. The
 repository uses an active GitHub ruleset named `protect main` for the default
-branch. It requires pull request flow and the Jenkins check before merge:
+branch. It requires pull request flow and only the Jenkins Checks API summary
+check before merge:
 
 ```text
-continuous-integration/jenkins/pr-head
+Jenkins
 ```
+
+That aggregate check captures the full pipeline result. Stage-level Jenkins
+Checks remain visible on pull requests for auditability, but they are not
+individually required. The legacy `continuous-integration/jenkins/pr-head`
+status context is disabled in Jenkins Branch Source with `Skip build status
+notifications`.
 
 The repository is operated as a solo-maintained public repository. GitHub
 settings were checked with GitHub CLI and show that `kerbatek` is the only

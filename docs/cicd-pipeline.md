@@ -19,8 +19,30 @@ Git push or pull request
 
 ## Stages
 
-`Build Astro` runs in the `node` container and executes
-`deploy/scripts/build-astro.sh`.
+Frontend stages run in the `node` container:
+
+```text
+Install Frontend Dependencies -> npm ci
+Scan Frontend Packages        -> npm run scan:frontend:packages
+Lint Frontend                 -> npm run lint:frontend
+Build Astro                   -> npm run build
+```
+
+Each Jenkins stage publishes a GitHub check run with the stage name through the
+Jenkins Checks API and GitHub Checks plugins. The check links back to the
+Jenkins build URL and reports the failing stage directly in GitHub.
+
+`lint:frontend` runs:
+
+- Prettier formatting checks for frontend source and config files
+- ESLint checks for JavaScript, TypeScript, and Astro code
+- `astro check` for Astro and TypeScript diagnostics
+
+ESLint is the code lint step. It catches likely bugs and unsafe or hard-to-read
+frontend code before the site is built.
+
+`scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
+frontend dependency graph. CI fails on high or critical npm advisories.
 
 `Terraform Plan` runs in the `terraform` container and assumes:
 
@@ -83,7 +105,29 @@ protection is part of the AWS security boundary. A change should not reach
 
 This repository uses an active GitHub ruleset named `protect main` for the
 default branch. It blocks deletion and non-fast-forward updates, requires pull
-request flow, allows squash merge, and requires the Jenkins status check:
+request flow, allows squash merge, and requires only the Jenkins Checks API
+summary check:
+
+```text
+Jenkins
+```
+
+That aggregate check represents the full Jenkins pipeline result, so it is the
+only required merge check. Stage-level GitHub Checks are also published for
+readability and debugging, but they are not individually required:
+
+```text
+Install Frontend Dependencies
+Scan Frontend Packages
+Lint Frontend
+Build Astro
+Terraform Plan
+Terraform Apply
+Deploy Static Site
+```
+
+The legacy GitHub Status API context is disabled in Jenkins Branch Source using
+the `Skip build status notifications` behavior:
 
 ```text
 continuous-integration/jenkins/pr-head
