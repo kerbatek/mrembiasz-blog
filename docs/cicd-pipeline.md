@@ -83,28 +83,32 @@ protection is part of the AWS security boundary. A change should not reach
 
 This repository uses an active GitHub ruleset named `protect main` for the
 default branch. It blocks deletion and non-fast-forward updates, requires pull
-request flow, requires one approving review, requires CODEOWNERS review,
-allows squash merge, and requires the Jenkins status check:
+request flow, allows squash merge, and requires the Jenkins status check:
 
 ```text
 continuous-integration/jenkins/pr-head
 ```
 
-Repository-wide ownership is declared in `.github/CODEOWNERS`:
+The repository is operated as a solo-maintained public repository. GitHub
+settings were checked with GitHub CLI and show:
 
 ```text
-* @kerbatek
+collaborators with write/admin access: kerbatek
+pull_request_creation_policy: collaborators_only
+ruleset bypass actors: none
+required approving reviews: 0
 ```
 
-GitHub evaluates CODEOWNERS from the protected base branch. A pull request can
-propose changes to `.github/CODEOWNERS`, but it still needs approval from the
-owner defined on `main` before that change can affect future pull requests.
+Required reviews are intentionally disabled. This is a solo-maintained
+repository, and GitHub does not let the pull request author approve their own
+PR. The enforced merge gate is the required Jenkins status check before a PR
+can reach `main`.
 
 PR Jenkinsfile changes still run with the plan role, so the plan role must stay
 non-destructive. A malicious PR can alter CI behavior, but it cannot assume the
 deploy role unless that change reaches protected `main`. The destructive AWS
 boundary is enforced by the deploy role trust policy plus GitHub ruleset and
-CODEOWNERS approval.
+required Jenkins status check.
 
 ## Platform permissions
 

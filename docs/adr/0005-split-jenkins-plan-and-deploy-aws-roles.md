@@ -42,28 +42,27 @@ only for `Terraform Apply` and `Deploy Static Site`, both guarded by
 
 Protect `main` in GitHub because it is part of the AWS deployment boundary. The
 repository uses an active GitHub ruleset named `protect main` for the default
-branch. It requires pull request flow, one approving review, CODEOWNERS review,
-and the Jenkins check before merge:
+branch. It requires pull request flow and the Jenkins check before merge:
 
 ```text
 continuous-integration/jenkins/pr-head
 ```
 
-Repository-wide CODEOWNERS is set to:
+The repository is operated as a solo-maintained public repository. GitHub
+settings were checked with GitHub CLI and show that `kerbatek` is the only
+collaborator with write/admin access, pull request creation is restricted to
+collaborators, the ruleset has no bypass actors, and required approving reviews
+are disabled.
 
-```text
-* @kerbatek
-```
-
-GitHub evaluates CODEOWNERS from the protected base branch, so a pull request
-that changes `.github/CODEOWNERS` still requires approval from the owner defined
-on `main`.
+Required reviews are intentionally disabled because this is a solo-maintained
+repository and GitHub does not let the pull request author approve their own PR.
+The required Jenkins check is the enforced merge gate.
 
 PR Jenkinsfile changes still run with the plan role, so the plan role must stay
 non-destructive. A malicious PR can alter CI behavior, but it cannot assume the
 deploy role unless that change reaches protected `main`. The destructive AWS
 boundary is enforced by the deploy role trust policy plus GitHub ruleset and
-CODEOWNERS approval.
+required Jenkins status check.
 
 ## Rationale
 
