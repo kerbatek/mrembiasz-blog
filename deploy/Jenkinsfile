@@ -2,44 +2,25 @@ pipeline {
   agent {
     kubernetes {
       defaultContainer 'node'
-      yaml '''
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: node
-      image: node:24-alpine
-      command:
-        - cat
-      tty: true
-    - name: terraform
-      image: hashicorp/terraform:1.13
-      command:
-        - cat
-      tty: true
-    - name: aws
-      image: amazon/aws-cli:2.28.21
-      command:
-        - cat
-      tty: true
-'''
+      yamlFile 'deploy/jenkins/agent-pod.yaml'
     }
   }
 
   environment {
-    AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
     TF_IN_AUTOMATION = 'true'
   }
 
   stages {
     stage('Build Astro') {
       steps {
-        sh 'npm ci'
-        sh 'npm run build'
+        sh 'deploy/scripts/build-astro.sh'
       }
     }
 
     stage('Terraform Plan') {
+      environment {
+        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
+      }
       steps {
         container('terraform') {
           withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
@@ -53,6 +34,9 @@ spec:
       when {
         branch 'main'
       }
+      environment {
+        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
+      }
       steps {
         container('terraform') {
           withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
@@ -65,6 +49,9 @@ spec:
     stage('Deploy Static Site') {
       when {
         branch 'main'
+      }
+      environment {
+        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
       }
       steps {
         container('aws') {
