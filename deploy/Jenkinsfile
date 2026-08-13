@@ -118,7 +118,7 @@ pipeline {
             stage('Build Astro') {
               steps {
                 script {
-                  checkedSh(name: 'Build Astro', exec: 'npm run build')
+                  checkedSh(name: 'Build Astro', exec: 'PUBLIC_DEPLOY_ID="${GIT_COMMIT:-local}" npm run build')
                 }
               }
             }

@@ -2,6 +2,6 @@
 set -eu
 
 url="https://blog.mrembiasz.pl/"
-expected="<title>Mateusz Rembiasz Blog</title>"
+expected="name=\"deploy-id\" content=\"${GIT_COMMIT:?GIT_COMMIT is required}\""
 
 wget -qO- "$url" | grep -Fq "$expected"

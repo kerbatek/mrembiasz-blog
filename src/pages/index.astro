@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 
+const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
+
 const posts = [
   {
     title: "Designing a serverless blog platform",
@@ -22,6 +24,7 @@ const topics = ["AWS", "Serverless", "Astro", "Terraform", "Jenkins"];
       name="description"
       content="Technical notes by Mateusz Rembiasz on cloud infrastructure, serverless systems, and operations."
     />
+    <meta name="deploy-id" content={deployId} />
     <title>Mateusz Rembiasz Blog</title>
   </head>
   <body>
