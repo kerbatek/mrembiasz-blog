@@ -16,6 +16,14 @@ aws s3 sync dist/ "s3://${bucket_name}" \
   --cache-control "public, max-age=60" \
   --content-type "text/html; charset=utf-8"
 
-aws cloudfront create-invalidation \
+invalidation_id="$(
+  aws cloudfront create-invalidation \
   --distribution-id "${distribution_id}" \
-  --paths "/*"
+  --paths "/*" \
+  --query "Invalidation.Id" \
+  --output text
+)"
+
+aws cloudfront wait invalidation-completed \
+  --distribution-id "${distribution_id}" \
+  --id "${invalidation_id}"

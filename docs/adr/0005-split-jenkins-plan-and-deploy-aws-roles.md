@@ -37,8 +37,8 @@ https://jenkins.mrembiasz.pl/job/mrembiasz-blog/job/main/
 ```
 
 The Jenkinsfile assumes the plan role for `Terraform Plan` and the deploy role
-only for `Terraform Apply` and `Deploy Static Site`, both guarded by
-`when { branch 'main' }`.
+for the `Release` path on `main`: `Terraform Apply`, `Deploy Static Site`, and
+the post-deploy smoke test.
 
 Protect `main` in GitHub because it is part of the AWS deployment boundary. The
 repository uses an active GitHub ruleset named `protect main` for the default

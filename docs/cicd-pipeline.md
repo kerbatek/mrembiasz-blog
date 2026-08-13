@@ -10,16 +10,17 @@ The pipeline runs on ephemeral Kubernetes agent Pods defined in
 Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
-  -> Astro build
-  -> Terraform plan
+  -> frontend checks/build and Terraform plan in parallel
   -> Terraform apply on main
   -> S3 sync on main
   -> CloudFront invalidation on main
+  -> smoke test on main
 ```
 
 ## Stages
 
-Frontend stages run in the `node` container:
+Validation runs in parallel. Frontend stages run sequentially in the `node`
+container:
 
 ```text
 Install Frontend Dependencies -> npm ci
@@ -44,7 +45,8 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`Terraform Plan` runs in the `terraform` container and assumes:
+`Terraform Plan` runs in parallel with the frontend path in the `terraform`
+container and assumes:
 
 ```text
 arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan
@@ -53,7 +55,8 @@ arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan
 The plan script uses `terraform plan -lock=false` so the plan role can stay
 read-only for Terraform state and does not need state lock write permissions.
 The generated binary plan and readable text plan are archived as Jenkins
-artifacts.
+artifacts. The `Terraform Plan` GitHub check title is set from the plan result,
+for example `No Terraform changes.`.
 
 `Terraform Apply` runs only on `main` and assumes:
 
@@ -62,7 +65,12 @@ arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy
 ```
 
 `Deploy Static Site` also runs only on `main` with the deploy role. It syncs
-`dist/` to the private S3 site bucket and creates a CloudFront invalidation.
+`dist/` to the private S3 site bucket, creates a CloudFront invalidation, and
+waits for that invalidation to complete.
+
+`Smoke Test Website` runs after the invalidation completes. The Astro build
+embeds the Jenkins `GIT_COMMIT` into a `deploy-id` meta tag, and the smoke test
+checks that `https://blog.mrembiasz.pl/` serves that exact deploy id.
 
 Jenkins disables concurrent builds for this pipeline. That keeps Terraform
 apply, S3 sync, and CloudFront invalidation serialized for this repository.
@@ -124,6 +132,7 @@ Build Astro
 Terraform Plan
 Terraform Apply
 Deploy Static Site
+Smoke Test Website
 ```
 
 The legacy GitHub Status API context is disabled in Jenkins Branch Source using
