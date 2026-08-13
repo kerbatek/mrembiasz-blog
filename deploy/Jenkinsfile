@@ -7,10 +7,12 @@ def githubCheck(String name, Closure body) {
 
   try {
     def checkResult = body.call()
+    def checkTitle = name
     def checkSummary = 'Passed'
     def checkText = null
 
     if (checkResult instanceof Map) {
+      checkTitle = checkResult.title ?: checkTitle
       checkSummary = checkResult.summary ?: checkSummary
       checkText = checkResult.text
     } else if (checkResult) {
@@ -21,7 +23,7 @@ def githubCheck(String name, Closure body) {
       name: name,
       status: 'COMPLETED',
       conclusion: 'SUCCESS',
-      title: name,
+      title: checkTitle,
       summary: checkSummary,
       detailsURL: env.BUILD_URL
     ]
@@ -111,6 +113,7 @@ pipeline {
               githubCheck('Terraform Plan') {
                 sh 'deploy/scripts/terraform-plan.sh'
                 [
+                  title: readFile('terraform/tfplan-summary.txt').trim(),
                   summary: readFile('terraform/tfplan-summary.txt').trim(),
                   text: "```text\n${readFile('terraform/tfplan.txt').take(60000)}\n```"
                 ]
