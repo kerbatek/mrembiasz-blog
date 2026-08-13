@@ -6,12 +6,12 @@ def githubCheck(String name, Closure body) {
     detailsURL: env.BUILD_URL
 
   try {
-    body.call()
+    def checkSummary = body.call() ?: 'Passed'
     publishChecks name: name,
       status: 'COMPLETED',
       conclusion: 'SUCCESS',
       title: name,
-      summary: 'Passed',
+      summary: checkSummary,
       detailsURL: env.BUILD_URL
   } catch (error) {
     publishChecks name: name,
@@ -92,6 +92,7 @@ pipeline {
             script {
               githubCheck('Terraform Plan') {
                 sh 'deploy/scripts/terraform-plan.sh'
+                readFile('terraform/tfplan-summary.txt').trim()
               }
             }
           }
@@ -142,7 +143,7 @@ pipeline {
 
   post {
     success {
-      archiveArtifacts artifacts: 'dist/**, terraform/tfplan, terraform/tfplan.txt', fingerprint: true
+      archiveArtifacts artifacts: 'dist/**, terraform/tfplan, terraform/tfplan.txt, terraform/tfplan-summary.txt', fingerprint: true
     }
   }
 }
