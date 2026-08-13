@@ -19,7 +19,7 @@ pipeline {
 
     stage('Terraform Plan') {
       environment {
-        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
+        AWS_ROLE_ARN = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
       }
       steps {
         container('terraform') {
