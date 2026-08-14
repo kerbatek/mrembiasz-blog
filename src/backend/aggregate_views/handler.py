@@ -4,6 +4,16 @@ import os
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+_dynamodb_client = None
+
+
+def get_dynamodb_client():
+    global _dynamodb_client
+    if _dynamodb_client is None:
+        import boto3
+
+        _dynamodb_client = boto3.client("dynamodb")
+    return _dynamodb_client
 
 
 def parse_message(record):
@@ -58,10 +68,8 @@ def handle_event(event, table_name, client, now=None):
 
 
 def lambda_handler(event, _context):
-    import boto3
-
     return handle_event(
         event,
         os.environ["POST_VIEWS_TABLE_NAME"],
-        boto3.client("dynamodb"),
+        get_dynamodb_client(),
     )

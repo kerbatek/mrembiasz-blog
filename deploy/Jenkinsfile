@@ -1,5 +1,6 @@
 def PLAN_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
 def DEPLOY_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
+def BACKEND_PYTHON_PATHS = 'src/backend tests/backend'
 
 def githubCheck(String name, Closure body) {
   publishChecks(
@@ -129,6 +130,50 @@ pipeline {
               steps {
                 script {
                   checkedSh(name: 'Build Astro', exec: 'PUBLIC_DEPLOY_ID="${GIT_COMMIT:-local}" npm run build')
+                }
+              }
+            }
+          }
+        }
+
+        stage('Backend') {
+          stages {
+            stage('Install Backend Tools') {
+              steps {
+                container('python') {
+                  script {
+                    checkedSh(name: 'Install Backend Tools', exec: 'python -m pip install --upgrade pip && python -m pip install -r requirements-backend.txt')
+                  }
+                }
+              }
+            }
+
+            stage('Scan Backend Packages') {
+              steps {
+                container('python') {
+                  script {
+                    checkedSh(name: 'Scan Backend Packages', exec: 'pip-audit --cache-dir /tmp/pip-audit-cache')
+                  }
+                }
+              }
+            }
+
+            stage('Lint Backend') {
+              steps {
+                container('python') {
+                  script {
+                    checkedSh(name: 'Lint Backend', exec: "ruff format --check ${BACKEND_PYTHON_PATHS} && ruff check ${BACKEND_PYTHON_PATHS}")
+                  }
+                }
+              }
+            }
+
+            stage('Run Backend Tests') {
+              steps {
+                container('python') {
+                  script {
+                    checkedSh(name: 'Run Backend Tests', exec: 'pytest tests/backend')
+                  }
                 }
               }
             }

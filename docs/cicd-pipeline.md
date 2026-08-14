@@ -10,7 +10,7 @@ The pipeline runs on ephemeral Kubernetes agent Pods defined in
 Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
-  -> frontend checks/build and Terraform plan in parallel
+  -> frontend checks/build, backend tests, and Terraform plan in parallel
   -> Terraform apply on main
   -> S3 sync on main
   -> CloudFront invalidation on main
@@ -27,6 +27,17 @@ Install Frontend Dependencies -> npm ci
 Scan Frontend Packages        -> npm run scan:frontend:packages
 Lint Frontend                 -> npm run lint:frontend
 Build Astro                   -> npm run build
+```
+
+Backend checks run sequentially in the `python` container:
+
+```text
+Install Backend Tools -> python -m pip install --upgrade pip
+                      -> python -m pip install -r requirements-backend.txt
+Scan Backend Packages -> pip-audit --cache-dir /tmp/pip-audit-cache
+Lint Backend          -> ruff format --check src/backend tests/backend
+                      -> ruff check src/backend tests/backend
+Run Backend Tests     -> pytest tests/backend
 ```
 
 Each Jenkins stage publishes a GitHub check run with the stage name through the
@@ -130,6 +141,10 @@ Install Frontend Dependencies
 Scan Frontend Packages
 Lint Frontend
 Build Astro
+Install Backend Tools
+Lint Backend
+Scan Backend Packages
+Run Backend Tests
 Terraform Plan
 Terraform Apply
 Deploy Static Site
