@@ -32,7 +32,8 @@ Build Astro                   -> npm run build
 Backend checks run sequentially in the `python` container:
 
 ```text
-Install Backend Tools -> python -m pip install -r requirements-backend.txt
+Install Backend Tools -> python -m pip install --upgrade pip
+                      -> python -m pip install -r requirements-backend.txt
 Scan Backend Packages -> pip-audit --cache-dir /tmp/pip-audit-cache
 Lint Backend          -> ruff format --check src/backend tests/backend
                       -> ruff check src/backend tests/backend

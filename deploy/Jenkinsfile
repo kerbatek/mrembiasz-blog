@@ -142,7 +142,7 @@ pipeline {
               steps {
                 container('python') {
                   script {
-                    checkedSh(name: 'Install Backend Tools', exec: 'python -m pip install -r requirements-backend.txt')
+                    checkedSh(name: 'Install Backend Tools', exec: 'python -m pip install --upgrade pip && python -m pip install -r requirements-backend.txt')
                   }
                 }
               }
