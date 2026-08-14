@@ -56,7 +56,8 @@ The plan script uses `terraform plan -lock=false` so the plan role can stay
 read-only for Terraform state and does not need state lock write permissions.
 The generated binary plan and readable text plan are archived as Jenkins
 artifacts. The `Terraform Plan` GitHub check title is set from the plan result,
-for example `No Terraform changes.`.
+for example `No Terraform changes.`. `Terraform Apply` reuses that same title
+on `main`.
 
 `Terraform Apply` runs only on `main` and assumes:
 
