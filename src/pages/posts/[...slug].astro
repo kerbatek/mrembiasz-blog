@@ -52,7 +52,6 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
           if (localStorage.getItem(storageKey)) {
             return;
           }
-          localStorage.setItem(storageKey, "1");
         } catch {
           // Ignore storage failures; analytics should never affect reading.
         }
@@ -60,7 +59,17 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
         fetch(`/api/views/${encodeURIComponent(slug)}`, {
           method: "POST",
           keepalive: true,
-        }).catch(() => {});
+        })
+          .then((response) => {
+            if (response.ok) {
+              try {
+                localStorage.setItem(storageKey, "1");
+              } catch {
+                // Ignore storage failures; analytics should never affect reading.
+              }
+            }
+          })
+          .catch(() => {});
       }
 
       recordPostView(postSlug);
