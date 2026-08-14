@@ -1,18 +1,13 @@
 ---
+import { getCollection } from "astro:content";
 import "../styles/global.css";
+import "../styles/index.css";
 
 const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
 
-const posts = [
-  {
-    title: "Designing a serverless blog platform",
-    date: "2026-08-11",
-    summary:
-      "Notes on the production architecture behind this blog: Astro, S3, CloudFront, Jenkins, Terraform, and AWS IAM.",
-  },
-];
-
-const topics = ["AWS", "Serverless", "Astro", "Terraform", "Jenkins"];
+const posts = (await getCollection("blog")).sort((a, b) =>
+  b.data.date.localeCompare(a.data.date),
+);
 ---
 
 <!doctype html>
@@ -22,50 +17,37 @@ const topics = ["AWS", "Serverless", "Astro", "Terraform", "Jenkins"];
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Technical notes by Mateusz Rembiasz on cloud infrastructure, serverless systems, and operations."
+      content="Production notes by Mateusz Rembiasz on AWS, infrastructure, CI/CD, and serverless systems."
     />
     <meta name="deploy-id" content={deployId} />
     <title>Mateusz Rembiasz Blog</title>
   </head>
   <body>
     <main class="container">
-      <nav class="nav" aria-label="Primary navigation">
-        <a href="/" aria-current="page">Blog</a>
-        <a href="https://mrembiasz.pl">Home</a>
-      </nav>
-
       <h1 class="name">Mateusz Rembiasz Blog</h1>
-      <p class="status">Cloud / Serverless / Operations</p>
       <p class="bio">
-        Production notes on AWS, Kubernetes, infrastructure as code, CI/CD, and
-        the tradeoffs behind small systems that should stay understandable.
+        Hi! :) Welcome to my blog! I write about AWS, infrastructure, CI/CD, and
+        serverless systems. You can also check my <a href="https://mrembiasz.pl"
+          >portfolio</a
+        > for more information about me.
       </p>
-
-      <section class="section" aria-labelledby="topics-title">
-        <p id="topics-title" class="section-label">Topics</p>
-        <div class="tags">
-          {topics.map((topic) => <span class="tag">{topic}</span>)}
-        </div>
-      </section>
 
       <section class="section" aria-labelledby="posts-title">
         <p id="posts-title" class="section-label">Latest</p>
         <div class="posts">
           {
             posts.map((post) => (
-              <article class="post">
+              <a class="post" href={`/posts/${post.id}/`}>
                 <div class="post-header">
-                  <h2>{post.title}</h2>
-                  <time datetime={post.date}>{post.date}</time>
+                  <h2>{post.data.title}</h2>
+                  <time datetime={post.data.date}>{post.data.date}</time>
                 </div>
-                <p>{post.summary}</p>
-              </article>
+                <p>{post.data.summary}</p>
+              </a>
             ))
           }
         </div>
       </section>
-
-      <p class="footer">Built with Astro. Served from AWS.</p>
     </main>
   </body>
 </html>

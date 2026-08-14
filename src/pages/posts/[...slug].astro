@@ -1,0 +1,48 @@
+---
+import { getCollection, render } from "astro:content";
+import "../../styles/global.css";
+import "../../styles/post.css";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={post.data.summary} />
+    <meta name="deploy-id" content={deployId} />
+    <title>{post.data.title} | Mateusz Rembiasz Blog</title>
+  </head>
+  <body>
+    <main class="container">
+      <article class="article">
+        <nav class="article-back article-back-top" aria-label="Post navigation">
+          <a href="/">Back to blog</a>
+        </nav>
+
+        <header class="article-header">
+          <h1 class="name">{post.data.title}</h1>
+          <time datetime={post.data.date}>{post.data.date}</time>
+        </header>
+        <Content />
+        <p class="article-thanks">Thank you for reading :)</p>
+        <nav class="article-back" aria-label="Post navigation">
+          <a href="/">Back to blog</a>
+        </nav>
+      </article>
+    </main>
+  </body>
+</html>

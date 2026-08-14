@@ -17,8 +17,9 @@ experience should not depend on a running application server.
 ## Decision
 
 Use Astro to build the frontend as a static site. Astro is a good fit because
-it generates SEO-friendly HTML pages and supports Markdown content, which keeps
-blog posts easy to write and review in Git.
+it generates SEO-friendly HTML pages and supports MDX content, which keeps blog
+posts easy to write and review in Git while leaving room for embedded
+components when a post needs them.
 
 Astro will generate the website into `dist/`. The generated files will be
 uploaded to a private S3 bucket and served publicly through CloudFront:
@@ -42,7 +43,7 @@ and the final hostname record must exist in the external DNS provider.
 
 ## Rationale
 
-Astro fits the main workload: mostly static content, Markdown posts, and pages
+Astro fits the main workload: mostly static content, MDX posts, and pages
 that should be easy for crawlers to read.
 
 A server-rendered frontend would add a runtime service to operate without
@@ -63,8 +64,8 @@ The deployed website has no runtime dependency on the homelab or a Node server.
 If CI/CD is unavailable, publishing new content is delayed, but the already
 deployed site keeps serving from AWS.
 
-Astro keeps the frontend small while still supporting blog features such as
-Markdown content pages, metadata, RSS, and SEO-friendly HTML.
+Astro keeps the frontend small while still supporting blog features such as MDX
+content pages, metadata, RSS, and SEO-friendly HTML.
 
 CloudFront certificate creation depends on external DNS validation. If the ACM
 validation CNAME is missing or changed, Terraform apply will wait or fail until
