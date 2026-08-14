@@ -1,6 +1,7 @@
 node_modules/
 dist/*
 .astro/*
+__pycache__/
 
 .env
 .env.*
@@ -11,3 +12,4 @@ npm-debug.log*
 *.tfstate
 *.tfstate.*
 tfplan
+terraform/*.zip

@@ -44,5 +44,15 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
         </nav>
       </article>
     </main>
+    <script is:inline define:vars={{ postSlug: post.id }}>
+      function recordPostView(slug) {
+        fetch(`/api/views/${encodeURIComponent(slug)}`, {
+          method: "POST",
+          keepalive: true,
+        }).catch(() => {});
+      }
+
+      recordPostView(postSlug);
+    </script>
   </body>
 </html>
