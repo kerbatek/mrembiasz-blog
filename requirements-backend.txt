@@ -1,0 +1,3 @@
+ruff
+pip-audit
+pytest

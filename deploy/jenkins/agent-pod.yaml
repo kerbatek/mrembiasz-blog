@@ -12,6 +12,11 @@ spec:
       command:
         - cat
       tty: true
+    - name: python
+      image: python:3.12-slim
+      command:
+        - cat
+      tty: true
     - name: aws
       image: amazon/aws-cli:2.28.21
       command:
