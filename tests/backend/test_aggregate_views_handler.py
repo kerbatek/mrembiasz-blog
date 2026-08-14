@@ -82,6 +82,13 @@ class AggregateViewsHandlerTest(unittest.TestCase):
         self.assertEqual(result, {"batchItemFailures": [{"itemIdentifier": "bad"}]})
         self.assertEqual(len(client.updates), 1)
 
+    def test_reraises_failed_record_without_message_id(self):
+        client = FakeDynamoDB()
+        event = {"Records": [{"body": json.dumps({"post_slug": ""})}]}
+
+        with self.assertRaises(ValueError):
+            handle_event(event, "post-views", client)
+
 
 if __name__ == "__main__":
     unittest.main()

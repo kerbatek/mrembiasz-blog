@@ -44,12 +44,15 @@ def handle_event(event, table_name, client, now=None):
             post_slug = parse_message(record)
             update_view_count(client, table_name, post_slug, now)
         except Exception as error:
+            message_id = record.get("messageId")
             logger.warning(
                 "failed to process message %s: %s",
-                record.get("messageId"),
+                message_id,
                 error,
             )
-            failures.append({"itemIdentifier": record["messageId"]})
+            if not message_id:
+                raise
+            failures.append({"itemIdentifier": message_id})
 
     return {"batchItemFailures": failures}
 
