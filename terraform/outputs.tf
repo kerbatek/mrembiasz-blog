@@ -13,6 +13,11 @@ output "cloudfront_domain_name" {
   value       = aws_cloudfront_distribution.site.domain_name
 }
 
+output "analytics_api_endpoint" {
+  description = "HTTP API endpoint for analytics ingestion."
+  value       = aws_apigatewayv2_api.analytics.api_endpoint
+}
+
 output "acm_validation_records" {
   description = "DNS CNAME records required to validate the ACM certificate."
   value = {

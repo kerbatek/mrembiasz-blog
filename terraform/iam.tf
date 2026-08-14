@@ -89,3 +89,42 @@ resource "aws_iam_role_policy_attachment" "aggregate_views_lambda_logs" {
   role       = aws_iam_role.aggregate_views_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
+data "aws_iam_policy_document" "analytics_validator_lambda_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "analytics_validator_lambda" {
+  name               = "mrembiasz-blog-analytics-validator-lambda"
+  assume_role_policy = data.aws_iam_policy_document.analytics_validator_lambda_assume_role.json
+  tags               = local.tags
+}
+
+data "aws_iam_policy_document" "analytics_validator_lambda" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.analytics_events.arn]
+  }
+}
+
+resource "aws_iam_policy" "analytics_validator_lambda" {
+  name   = "mrembiasz-blog-analytics-validator-lambda"
+  policy = data.aws_iam_policy_document.analytics_validator_lambda.json
+}
+
+resource "aws_iam_role_policy_attachment" "analytics_validator_lambda" {
+  role       = aws_iam_role.analytics_validator_lambda.name
+  policy_arn = aws_iam_policy.analytics_validator_lambda.arn
+}
+
+resource "aws_iam_role_policy_attachment" "analytics_validator_lambda_logs" {
+  role       = aws_iam_role.analytics_validator_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
