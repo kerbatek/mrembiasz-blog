@@ -45,6 +45,12 @@ resource "aws_cloudfront_distribution" "site" {
   price_class         = "PriceClass_100"
   tags                = local.tags
 
+  logging_config {
+    bucket          = aws_s3_bucket.cloudfront_logs.bucket_domain_name
+    include_cookies = false
+    prefix          = "cloudfront/"
+  }
+
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
     origin_id                = local.s3_origin_id
