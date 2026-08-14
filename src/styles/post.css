@@ -67,6 +67,7 @@
   border-radius: 6px;
   padding: 0.85rem 1rem;
   line-height: 1.55;
+  overflow-x: auto;
 }
 
 .article pre code {
@@ -117,7 +118,7 @@
 }
 
 .article-back a::before {
-  content: "<-";
+  content: "←";
 }
 
 .article-back a:hover {
