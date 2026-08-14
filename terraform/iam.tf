@@ -39,3 +39,53 @@ resource "aws_iam_role_policy_attachment" "jenkins_deploy" {
   role       = data.aws_iam_role.jenkins_deploy.name
   policy_arn = aws_iam_policy.jenkins_deploy.arn
 }
+
+data "aws_iam_policy_document" "aggregate_views_lambda_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "aggregate_views_lambda" {
+  name               = "mrembiasz-blog-aggregate-views-lambda"
+  assume_role_policy = data.aws_iam_policy_document.aggregate_views_lambda_assume_role.json
+  tags               = local.tags
+}
+
+data "aws_iam_policy_document" "aggregate_views_lambda" {
+  statement {
+    actions = [
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+
+    resources = [aws_sqs_queue.aggregate_post_views.arn]
+  }
+
+  statement {
+    actions   = ["dynamodb:UpdateItem"]
+    resources = [aws_dynamodb_table.aggregate_post_views.arn]
+  }
+}
+
+resource "aws_iam_policy" "aggregate_views_lambda" {
+  name   = "mrembiasz-blog-aggregate-views-lambda"
+  policy = data.aws_iam_policy_document.aggregate_views_lambda.json
+}
+
+resource "aws_iam_role_policy_attachment" "aggregate_views_lambda" {
+  role       = aws_iam_role.aggregate_views_lambda.name
+  policy_arn = aws_iam_policy.aggregate_views_lambda.arn
+}
+
+resource "aws_iam_role_policy_attachment" "aggregate_views_lambda_logs" {
+  role       = aws_iam_role.aggregate_views_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
