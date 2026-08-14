@@ -86,8 +86,9 @@ class AggregateViewsHandlerTest(unittest.TestCase):
         client = FakeDynamoDB()
         event = {"Records": [{"body": json.dumps({"post_slug": ""})}]}
 
-        with self.assertRaises(ValueError):
-            handle_event(event, "post-views", client)
+        with self.assertLogs("src.backend.aggregate_views.handler", level="WARNING"):
+            with self.assertRaises(ValueError):
+                handle_event(event, "post-views", client)
 
 
 if __name__ == "__main__":

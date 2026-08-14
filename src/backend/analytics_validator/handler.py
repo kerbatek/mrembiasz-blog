@@ -1,6 +1,17 @@
 import json
 import os
 
+_sns_client = None
+
+
+def get_sns_client():
+    global _sns_client
+    if _sns_client is None:
+        import boto3
+
+        _sns_client = boto3.client("sns")
+    return _sns_client
+
 
 def response(status_code, body):
     return {
@@ -34,10 +45,8 @@ def handle_event(event, topic_arn, sns_client):
 
 
 def lambda_handler(event, _context):
-    import boto3
-
     return handle_event(
         event,
         os.environ["ANALYTICS_TOPIC_ARN"],
-        boto3.client("sns"),
+        get_sns_client(),
     )
