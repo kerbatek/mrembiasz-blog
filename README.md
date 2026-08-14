@@ -9,6 +9,12 @@ npm ci
 npm run dev
 ```
 
+Blog posts live in `src/content/blog/*.mdx`.
+
+Mermaid diagrams can be written as fenced `mermaid` code blocks in posts. They
+are rendered to static SVG images during `astro build`, so local and CI builds
+need Playwright Chromium available.
+
 ## CI checks
 
 ```sh

@@ -3,7 +3,7 @@ kind: Pod
 spec:
   containers:
     - name: node
-      image: node:24-alpine
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
       command:
         - cat
       tty: true
