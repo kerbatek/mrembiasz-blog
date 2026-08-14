@@ -2,11 +2,12 @@ def PLAN_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
 def DEPLOY_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
 
 def githubCheck(String name, Closure body) {
-  publishChecks name: name,
+  publishChecks(
+    name: name,
     status: 'IN_PROGRESS',
-    title: null,
     summary: 'Running',
     detailsURL: env.BUILD_URL
+  )
 
   try {
     def checkResult = body.call()
@@ -26,10 +27,13 @@ def githubCheck(String name, Closure body) {
       name: name,
       status: 'COMPLETED',
       conclusion: 'SUCCESS',
-      title: checkTitle,
       summary: checkSummary,
       detailsURL: env.BUILD_URL
     ]
+
+    if (checkTitle) {
+      checkArgs.title = checkTitle
+    }
 
     if (checkText) {
       checkArgs.text = checkText
@@ -37,13 +41,14 @@ def githubCheck(String name, Closure body) {
 
     publishChecks checkArgs
   } catch (error) {
-    publishChecks name: name,
+    publishChecks(
+      name: name,
       status: 'COMPLETED',
       conclusion: 'FAILURE',
-      title: null,
       summary: 'Failed',
       text: error.getMessage(),
       detailsURL: env.BUILD_URL
+    )
     throw error
   }
 }
