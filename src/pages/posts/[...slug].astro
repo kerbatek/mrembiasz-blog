@@ -46,6 +46,17 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
     </main>
     <script is:inline define:vars={{ postSlug: post.id }}>
       function recordPostView(slug) {
+        const storageKey = `post-viewed:${slug}`;
+
+        try {
+          if (localStorage.getItem(storageKey)) {
+            return;
+          }
+          localStorage.setItem(storageKey, "1");
+        } catch {
+          // Ignore storage failures; analytics should never affect reading.
+        }
+
         fetch(`/api/views/${encodeURIComponent(slug)}`, {
           method: "POST",
           keepalive: true,
