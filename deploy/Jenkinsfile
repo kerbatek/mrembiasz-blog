@@ -186,7 +186,7 @@ pipeline {
 
   post {
     success {
-      archiveArtifacts artifacts: 'dist/**, terraform/tfplan, terraform/tfplan.txt, terraform/tfplan-summary.txt', fingerprint: true
+      archiveArtifacts artifacts: 'dist/**, terraform/tfplan.txt, terraform/tfplan-summary.txt', fingerprint: true
     }
   }
 }
