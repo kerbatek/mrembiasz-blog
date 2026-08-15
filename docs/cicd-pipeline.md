@@ -34,8 +34,9 @@ Build Astro                   -> npm run build
 Backend stages run sequentially in the `go` container:
 
 ```text
-Run Backend Tests -> deploy/scripts/test-backend-lambdas.sh
-Build Go Lambdas  -> deploy/scripts/build-backend-lambdas.sh
+Download Backend Dependencies -> deploy/scripts/download-backend-dependencies.sh
+Run Backend Tests             -> deploy/scripts/test-backend-lambdas.sh
+Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 ```
 
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
@@ -146,6 +147,7 @@ Install Frontend Dependencies
 Scan Frontend Packages
 Lint Frontend
 Build Astro
+Download Backend Dependencies
 Run Backend Tests
 Build Go Lambdas
 Terraform Plan

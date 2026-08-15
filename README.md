@@ -21,6 +21,7 @@ need Playwright Chromium available.
 npm run lint:frontend
 npm run scan:frontend:packages
 npm run build
+deploy/scripts/download-backend-dependencies.sh
 deploy/scripts/test-backend-lambdas.sh
 deploy/scripts/build-backend-lambdas.sh
 ```

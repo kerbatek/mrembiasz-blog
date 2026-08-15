@@ -136,6 +136,16 @@ pipeline {
 
         stage('Backend') {
           stages {
+            stage('Download Backend Dependencies') {
+              steps {
+                container('go') {
+                  script {
+                    checkedSh(name: 'Download Backend Dependencies', exec: 'deploy/scripts/download-backend-dependencies.sh')
+                  }
+                }
+              }
+            }
+
             stage('Run Backend Tests') {
               steps {
                 container('go') {
