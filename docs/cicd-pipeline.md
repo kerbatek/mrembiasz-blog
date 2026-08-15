@@ -82,6 +82,17 @@ If one SonarQube area fails, Jenkins still runs the remaining SonarQube scans
 so GitHub shows which areas passed and failed. Terraform plan and release only
 run when all quality gates pass.
 
+The intended SonarQube quality gate is enforced on new code only:
+
+```text
+Issues                       is greater than       0
+Security Hotspots Reviewed   is less than          100%
+Duplicated Lines (%)         is greater than       3.0%
+```
+
+Coverage is intentionally not part of the gate yet because CI does not publish
+frontend or backend coverage reports to SonarQube.
+
 `Terraform Plan` runs after validation and the SonarQube quality gates succeed,
 and assumes:
 
