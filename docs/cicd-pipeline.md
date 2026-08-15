@@ -164,28 +164,17 @@ Jenkins
 ```
 
 That aggregate check represents the full Jenkins pipeline result, so it is the
-only required merge check. Stage-level GitHub Checks are also published for
+only required merge check. Area-level GitHub Checks are also published for
 readability and debugging, but they are not individually required:
 
 ```text
-Install Frontend Dependencies
-Scan Frontend Packages
-Lint Frontend
-Build Astro
-Download Backend Dependencies
-Run Backend Tests
-Build Go Lambdas
-SonarQube Frontend Scan
-SonarQube Frontend Quality Gate
-SonarQube Backend Scan
-SonarQube Backend Quality Gate
-SonarQube Terraform Scan
-SonarQube Terraform Quality Gate
-Terraform Plan
-Terraform Apply
-Deploy Backend Lambdas
-Deploy Static Site
-Smoke Test Website
+Frontend
+Backend
+SonarQube Frontend
+SonarQube Backend
+SonarQube Terraform
+Terraform
+Release
 ```
 
 The legacy GitHub Status API context is disabled in Jenkins Branch Source using

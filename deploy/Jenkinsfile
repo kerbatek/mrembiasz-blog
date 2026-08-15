@@ -53,19 +53,18 @@ def githubCheck(String name, Closure body) {
 }
 
 def checkedSh(Map args) {
-  githubCheck(args.name) {
+  githubCheck(args.checkName ?: args.name) {
     sh args.exec
+    def result = [
+      summary: args.name
+    ]
     if (args.titleFile) {
-      return [
-        title: readFile(args.titleFile).trim(),
-        text: args.textFile ? readFile(args.textFile).trim() : null
-      ]
+      result.title = readFile(args.titleFile).trim()
     }
     if (args.textFile) {
-      return [
-        text: readFile(args.textFile).trim()
-      ]
+      result.text = readFile(args.textFile).trim()
     }
+    return result
   }
 }
 
@@ -81,7 +80,7 @@ def withAwsRole(String containerName, String roleArn, Closure body) {
 
 def checkedAwsSh(Map args) {
   withAwsRole(args.container, args.role) {
-    checkedSh(name: args.name, exec: args.exec, titleFile: args.titleFile)
+    checkedSh(name: args.name, checkName: args.checkName, exec: args.exec, titleFile: args.titleFile)
   }
 }
 
@@ -90,6 +89,7 @@ def checkedSonarScan(String label, String component) {
     withSonarQubeEnv('SonarQube') {
       checkedSh(
         name: "SonarQube ${label} Scan",
+        checkName: "SonarQube ${label}",
         exec: "deploy/scripts/sonarqube-scan.sh ${component}",
         textFile: "sonar-${component}-dashboard-url.txt"
       )
@@ -98,12 +98,12 @@ def checkedSonarScan(String label, String component) {
 }
 
 def checkedQualityGate(String name, String component) {
-  githubCheck(name) {
+  githubCheck(name.replace(' Quality Gate', '')) {
     if (!fileExists("sonar-${component}-dashboard-url.txt")) {
-      return 'Skipped because SonarQube scan failed.'
+      return "${name}: skipped because scan failed."
     }
     def qualityGate = waitForQualityGate abortPipeline: true
-    return "Quality Gate: ${qualityGate.status}"
+    return "${name}: ${qualityGate.status}"
   }
 }
 
@@ -131,7 +131,7 @@ pipeline {
             stage('Install Frontend Dependencies') {
               steps {
                 script {
-                  checkedSh(name: 'Install Frontend Dependencies', exec: 'npm ci')
+                  checkedSh(name: 'Install Frontend Dependencies', checkName: 'Frontend', exec: 'npm ci')
                 }
               }
             }
@@ -139,7 +139,7 @@ pipeline {
             stage('Scan Frontend Packages') {
               steps {
                 script {
-                  checkedSh(name: 'Scan Frontend Packages', exec: 'npm run scan:frontend:packages')
+                  checkedSh(name: 'Scan Frontend Packages', checkName: 'Frontend', exec: 'npm run scan:frontend:packages')
                 }
               }
             }
@@ -147,7 +147,7 @@ pipeline {
             stage('Lint Frontend') {
               steps {
                 script {
-                  checkedSh(name: 'Lint Frontend', exec: 'npm run lint:frontend')
+                  checkedSh(name: 'Lint Frontend', checkName: 'Frontend', exec: 'npm run lint:frontend')
                 }
               }
             }
@@ -155,7 +155,7 @@ pipeline {
             stage('Build Astro') {
               steps {
                 script {
-                  checkedSh(name: 'Build Astro', exec: 'PUBLIC_DEPLOY_ID="${GIT_COMMIT:-local}" npm run build')
+                  checkedSh(name: 'Build Astro', checkName: 'Frontend', exec: 'PUBLIC_DEPLOY_ID="${GIT_COMMIT:-local}" npm run build')
                 }
               }
             }
@@ -168,7 +168,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Download Backend Dependencies', exec: 'deploy/scripts/download-backend-dependencies.sh')
+                    checkedSh(name: 'Download Backend Dependencies', checkName: 'Backend', exec: 'deploy/scripts/download-backend-dependencies.sh')
                   }
                 }
               }
@@ -178,7 +178,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Run Backend Tests', exec: 'deploy/scripts/test-backend-lambdas.sh')
+                    checkedSh(name: 'Run Backend Tests', checkName: 'Backend', exec: 'deploy/scripts/test-backend-lambdas.sh')
                   }
                 }
               }
@@ -188,7 +188,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
+                    checkedSh(name: 'Build Go Lambdas', checkName: 'Backend', exec: 'deploy/scripts/build-backend-lambdas.sh')
                   }
                 }
               }
@@ -270,6 +270,7 @@ pipeline {
         script {
           checkedAwsSh(
             name: 'Terraform Plan',
+            checkName: 'Terraform',
             container: 'terraform',
             role: PLAN_ROLE,
             exec: 'deploy/scripts/terraform-plan.sh',
@@ -292,6 +293,7 @@ pipeline {
             script {
               checkedAwsSh(
                 name: 'Terraform Apply',
+                checkName: 'Release',
                 container: 'terraform',
                 role: DEPLOY_ROLE,
                 exec: 'deploy/scripts/terraform-apply.sh',
@@ -306,6 +308,7 @@ pipeline {
             script {
               checkedAwsSh(
                 name: 'Deploy Backend Lambdas',
+                checkName: 'Release',
                 container: 'aws',
                 role: DEPLOY_ROLE,
                 exec: 'deploy/scripts/deploy-backend-lambdas.sh'
@@ -319,6 +322,7 @@ pipeline {
             script {
               checkedAwsSh(
                 name: 'Deploy Static Site',
+                checkName: 'Release',
                 container: 'aws',
                 role: DEPLOY_ROLE,
                 exec: 'deploy/scripts/deploy-static-site.sh'
@@ -330,7 +334,7 @@ pipeline {
         stage('Smoke Test Website') {
           steps {
             script {
-              checkedSh(name: 'Smoke Test Website', exec: 'deploy/scripts/smoke-test-site.sh')
+              checkedSh(name: 'Smoke Test Website', checkName: 'Release', exec: 'deploy/scripts/smoke-test-site.sh')
             }
           }
         }
