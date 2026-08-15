@@ -13,7 +13,7 @@ spec:
         - cat
       tty: true
     - name: go
-      image: golang:1.25
+      image: ghcr.io/kerbatek/mrembiasz-blog-go-ci:1.25-zip
       command:
         - cat
       tty: true
