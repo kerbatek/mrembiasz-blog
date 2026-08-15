@@ -6,17 +6,24 @@ summary: "A practical example of moving small AWS Lambda handlers from Python to
 
 ## Premise
 
-Imagine you have a small serverless backend for your application. The backend is implemented using AWS Lambda, and the handlers are small: they parse a request, call one AWS service, and return a response.
-After deploying the backend, you notice that some requests are very slow. You check CloudWatch metrics and see that cold start are taking a long time.
+Imagine you have a small serverless backend for your application. The backend is
+implemented with AWS Lambda, and the handlers are small: they parse a request,
+call one AWS service, and return a response.
 
-This is annoying for several reasons:
-  - Cold start is not free: AWS bills for the time spent in the Lambda runtime, even if your
-    code does not run yet.
-  - Cold start affects user experience: if a user hits a cold Lambda, they will wait longer for the response.
+After deploying the backend, you notice that some requests are much slower than
+others. You check CloudWatch metrics and see that cold starts are taking a long
+time.
 
+This matters for several reasons:
 
-In this blog app, that backend handles post view analytics. The write path accepts a
-view event, sends it through SNS and SQS, and updates a DynamoDB counter:
+- Cold starts are not free: AWS bills for the time spent in the Lambda runtime,
+  even before your handler code starts doing useful work.
+- Cold starts affect user experience: if a user hits a cold Lambda, they wait
+  longer for the response.
+
+In this blog app, that backend handles post view analytics. The write path
+accepts a view event, sends it through SNS and SQS, and updates a DynamoDB
+counter:
 
 ```mermaid
 graph TD
@@ -86,6 +93,9 @@ The useful fields were:
 
 These numbers include real AWS service calls, so they are more useful for this
 case than a local microbenchmark.
+
+I call the first request in a new log stream "cold-ish" here because it includes
+the runtime setup cost visible in the Lambda report row.
 
 ### Validator Lambda
 
@@ -160,7 +170,7 @@ duration at each memory setting, not max memory used alone.
 ## Conclusion
 
 For these handlers, Go was worth it. The biggest improvement was cold start
-duration, but warm duration and max memory also improved.
+duration, but warm duration, billed duration, and max memory used also improved.
 
 This is not a rule that every Lambda should be Go. It worked here because the
 functions are small, latency-sensitive, and mostly do one AWS SDK call. The next
