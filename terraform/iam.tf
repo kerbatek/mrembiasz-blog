@@ -31,6 +31,18 @@ resource "aws_iam_policy" "jenkins_deploy" {
         ]
         Resource = aws_cloudfront_distribution.site.arn
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:GetFunctionConfiguration",
+          "lambda:UpdateFunctionCode",
+        ]
+        Resource = [
+          aws_lambda_function.aggregate_views.arn,
+          aws_lambda_function.analytics_validator.arn,
+          aws_lambda_function.get_views.arn,
+        ]
+      },
     ]
   })
 }

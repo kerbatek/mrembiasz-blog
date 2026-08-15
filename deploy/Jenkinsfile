@@ -140,7 +140,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Run Backend Tests', exec: 'for dir in src/backend/*; do (cd "$dir" && go test ./...); done')
+                    checkedSh(name: 'Run Backend Tests', exec: 'deploy/scripts/test-backend-lambdas.sh')
                   }
                 }
               }
@@ -182,6 +182,19 @@ pipeline {
                 role: DEPLOY_ROLE,
                 exec: 'deploy/scripts/terraform-apply.sh',
                 titleFile: 'terraform/tfplan-summary.txt'
+              )
+            }
+          }
+        }
+
+        stage('Deploy Backend Lambdas') {
+          steps {
+            script {
+              checkedAwsSh(
+                name: 'Deploy Backend Lambdas',
+                container: 'aws',
+                role: DEPLOY_ROLE,
+                exec: 'deploy/scripts/deploy-backend-lambdas.sh'
               )
             }
           }

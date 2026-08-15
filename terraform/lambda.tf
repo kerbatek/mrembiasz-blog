@@ -33,6 +33,13 @@ resource "aws_lambda_function" "analytics_validator" {
       ANALYTICS_TOPIC_ARN = aws_sns_topic.analytics_events.arn
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
+  }
 }
 
 resource "aws_lambda_function" "get_views" {
@@ -52,6 +59,13 @@ resource "aws_lambda_function" "get_views" {
       POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
+  }
 }
 
 resource "aws_lambda_function" "aggregate_views" {
@@ -70,6 +84,13 @@ resource "aws_lambda_function" "aggregate_views" {
     variables = {
       POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
   }
 }
 

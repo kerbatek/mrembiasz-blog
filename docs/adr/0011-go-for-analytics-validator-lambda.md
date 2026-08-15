@@ -55,8 +55,9 @@ on `arm64`.
 Use 512 MB memory for backend Lambdas unless CloudWatch metrics show a specific
 function needs a different setting.
 
-Terraform will package the compiled `bootstrap` binary. CI and local deploys
-must build Lambda binaries before Terraform plan/apply.
+Terraform owns Lambda infrastructure and configuration. Lambda code deployment
+is handled by the backend deploy script so code-only changes do not show up as
+Terraform infrastructure changes.
 
 The analytics validator was migrated first because it was already measured on
 the request path. The aggregate worker and read-side views Lambda are also Go
@@ -88,12 +89,16 @@ CloudWatch duration, billed duration, and max memory metrics after each Lambda
 is migrated.
 
 The repository now needs Go tooling for backend validation and deployment. CI
-builds and tests Go Lambdas before Terraform packages them.
+builds and tests Go Lambdas, packages them, and deploys code with
+`aws lambda update-function-code`.
 
-Local Terraform plan/apply requires running:
+Local backend code deployment requires running:
 
 ```sh
 deploy/scripts/build-backend-lambdas.sh
+deploy/scripts/deploy-backend-lambdas.sh
 ```
 
-before Terraform, otherwise the `bootstrap` file will be missing.
+Terraform still needs a built `bootstrap` file when creating a Lambda for the
+first time, but after creation it ignores `filename` and `source_code_hash` so
+code-only changes do not create Terraform plan noise.
