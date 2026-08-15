@@ -89,7 +89,7 @@ def checkedSonarScan(String label, String component) {
     withSonarQubeEnv('SonarQube') {
       checkedSh(
         name: "SonarQube ${label} Scan",
-        checkName: "SonarQube ${label}",
+        checkName: label,
         exec: "deploy/scripts/sonarqube-scan.sh ${component}",
         textFile: "sonar-${component}-dashboard-url.txt"
       )
@@ -98,12 +98,16 @@ def checkedSonarScan(String label, String component) {
 }
 
 def checkedQualityGate(String name, String component) {
-  githubCheck(name.replace(' Quality Gate', '')) {
-    if (!fileExists("sonar-${component}-dashboard-url.txt")) {
+  githubCheck(name.replace('SonarQube ', '').replace(' Quality Gate', '')) {
+    def dashboardUrlFile = "sonar-${component}-dashboard-url.txt"
+    if (!fileExists(dashboardUrlFile)) {
       return "${name}: skipped because scan failed."
     }
     def qualityGate = waitForQualityGate abortPipeline: true
-    return "${name}: ${qualityGate.status}"
+    return [
+      summary: "${name}: ${qualityGate.status}",
+      text: readFile(dashboardUrlFile).trim()
+    ]
   }
 }
 
