@@ -12,6 +12,13 @@ data "archive_file" "analytics_validator_lambda" {
   excludes    = ["__pycache__/**", "*.pyc"]
 }
 
+data "archive_file" "get_views_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/../src/backend/get_views"
+  output_path = "${path.module}/get_views_lambda.zip"
+  excludes    = ["__pycache__/**", "*.pyc"]
+}
+
 resource "aws_lambda_function" "analytics_validator" {
   function_name    = "mrembiasz-blog-analytics-validator"
   role             = aws_iam_role.analytics_validator_lambda.arn
@@ -26,6 +33,23 @@ resource "aws_lambda_function" "analytics_validator" {
   environment {
     variables = {
       ANALYTICS_TOPIC_ARN = aws_sns_topic.analytics_events.arn
+    }
+  }
+}
+
+resource "aws_lambda_function" "get_views" {
+  function_name    = "mrembiasz-blog-get-views"
+  role             = aws_iam_role.get_views_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.get_views_lambda.output_path
+  source_code_hash = data.archive_file.get_views_lambda.output_base64sha256
+  timeout          = 10
+  tags             = local.tags
+
+  environment {
+    variables = {
+      POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
     }
   }
 }

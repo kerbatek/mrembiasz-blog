@@ -35,7 +35,10 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
 
         <header class="article-header">
           <h1 class="name">{post.data.title}</h1>
-          <time datetime={post.data.date}>{post.data.date}</time>
+          <div class="article-meta">
+            <time datetime={post.data.date}>{post.data.date}</time>
+            <span id="post-views" aria-live="polite">Views: ...</span>
+          </div>
         </header>
         <Content />
         <p class="article-thanks">Thank you for reading :)</p>
@@ -72,6 +75,20 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
           .catch(() => {});
       }
 
+      function loadPostViews(slug) {
+        const viewElement = document.getElementById("post-views");
+
+        fetch(`/api/views/${encodeURIComponent(slug)}`)
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data) => {
+            if (viewElement && Number.isInteger(data?.views)) {
+              viewElement.textContent = `Views: ${data.views}`;
+            }
+          })
+          .catch(() => {});
+      }
+
+      loadPostViews(postSlug);
       recordPostView(postSlug);
     </script>
   </body>
