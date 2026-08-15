@@ -13,3 +13,4 @@ npm-debug.log*
 *.tfstate.*
 tfplan
 terraform/*.zip
+src/backend/analytics_validator/bootstrap
