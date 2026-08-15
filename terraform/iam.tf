@@ -128,3 +128,42 @@ resource "aws_iam_role_policy_attachment" "analytics_validator_lambda_logs" {
   role       = aws_iam_role.analytics_validator_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
+data "aws_iam_policy_document" "get_views_lambda_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "get_views_lambda" {
+  name               = "mrembiasz-blog-get-views-lambda"
+  assume_role_policy = data.aws_iam_policy_document.get_views_lambda_assume_role.json
+  tags               = local.tags
+}
+
+data "aws_iam_policy_document" "get_views_lambda" {
+  statement {
+    actions   = ["dynamodb:GetItem"]
+    resources = [aws_dynamodb_table.aggregate_post_views.arn]
+  }
+}
+
+resource "aws_iam_policy" "get_views_lambda" {
+  name   = "mrembiasz-blog-get-views-lambda"
+  policy = data.aws_iam_policy_document.get_views_lambda.json
+}
+
+resource "aws_iam_role_policy_attachment" "get_views_lambda" {
+  role       = aws_iam_role.get_views_lambda.name
+  policy_arn = aws_iam_policy.get_views_lambda.arn
+}
+
+resource "aws_iam_role_policy_attachment" "get_views_lambda_logs" {
+  role       = aws_iam_role.get_views_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}

@@ -16,6 +16,27 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
   name = "Managed-AllViewerExceptHostHeader"
 }
 
+resource "aws_cloudfront_cache_policy" "post_views_api" {
+  name        = "mrembiasz-blog-post-views-api"
+  default_ttl = 60
+  max_ttl     = 60
+  min_ttl     = 30
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
 resource "aws_cloudfront_origin_access_control" "site" {
   name                              = "${local.domain_name}-s3-oac"
   description                       = "Allow CloudFront to read ${aws_s3_bucket.site.bucket}"
@@ -90,6 +111,17 @@ resource "aws_cloudfront_distribution" "site" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.rewrite_directory_index.arn
     }
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/api/views/*"
+    target_origin_id         = local.api_origin_id
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    compress                 = true
+    cache_policy_id          = aws_cloudfront_cache_policy.post_views_api.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
   }
 
   ordered_cache_behavior {

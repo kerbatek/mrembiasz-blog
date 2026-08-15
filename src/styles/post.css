@@ -6,12 +6,15 @@
   margin-bottom: 1.5rem;
 }
 
-.article-header time,
+.article-meta,
 .article :where(p, li) {
   color: var(--muted);
 }
 
-.article-header time {
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     monospace;
