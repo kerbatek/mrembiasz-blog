@@ -13,7 +13,7 @@ spec:
         - cat
       tty: true
     - name: go
-      image: ghcr.io/kerbatek/mrembiasz-blog-go-ci:1.25-zip
+      image: kerbatek/mrembiasz-blog:go-1.25-zip
       command:
         - cat
       tty: true
