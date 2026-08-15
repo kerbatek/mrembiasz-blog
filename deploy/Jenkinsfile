@@ -65,7 +65,7 @@ def checkedSh(Map args) {
 
 def withAwsRole(String containerName, String roleArn, Closure body) {
   container(containerName) {
-    withEnv(["AWS_ROLE_ARN=${roleArn}"]) {
+    withEnv(["AWS_ROLE_ARN=${roleArn}", 'AWS_DEFAULT_REGION=eu-central-1']) {
       withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
         body.call()
       }
