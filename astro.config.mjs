@@ -51,4 +51,5 @@ export default defineConfig({
     }),
   },
   output: "static",
+  srcDir: "./src/frontend",
 });

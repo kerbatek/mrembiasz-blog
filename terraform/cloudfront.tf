@@ -18,9 +18,9 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
 
 resource "aws_cloudfront_cache_policy" "post_views_api" {
   name        = "mrembiasz-blog-post-views-api"
-  default_ttl = 60
-  max_ttl     = 60
-  min_ttl     = 30
+  default_ttl = 5
+  max_ttl     = 5
+  min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config {

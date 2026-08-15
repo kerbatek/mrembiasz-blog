@@ -1,10 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-for lambda_dir in \
-  src/backend/aggregate_views \
-  src/backend/analytics_validator \
-  src/backend/get_views
+for lambda_dir in src/backend/lambdas/*
 do
   (
     cd "$lambda_dir"

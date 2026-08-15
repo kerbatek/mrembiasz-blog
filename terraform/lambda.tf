@@ -1,18 +1,18 @@
 data "archive_file" "aggregate_views_lambda" {
   type        = "zip"
-  source_file = "${path.module}/../src/backend/aggregate_views/bootstrap"
+  source_file = "${path.module}/../src/backend/lambdas/aggregate_views/bootstrap"
   output_path = "${path.module}/aggregate_views_lambda.zip"
 }
 
 data "archive_file" "analytics_validator_lambda" {
   type        = "zip"
-  source_file = "${path.module}/../src/backend/analytics_validator/bootstrap"
+  source_file = "${path.module}/../src/backend/lambdas/analytics_validator/bootstrap"
   output_path = "${path.module}/analytics_validator_lambda.zip"
 }
 
 data "archive_file" "get_views_lambda" {
   type        = "zip"
-  source_file = "${path.module}/../src/backend/get_views/bootstrap"
+  source_file = "${path.module}/../src/backend/lambdas/get_views/bootstrap"
   output_path = "${path.module}/get_views_lambda.zip"
 }
 
