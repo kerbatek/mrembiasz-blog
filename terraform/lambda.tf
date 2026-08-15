@@ -1,8 +1,7 @@
 data "archive_file" "aggregate_views_lambda" {
   type        = "zip"
-  source_dir  = "${path.module}/../src/backend/aggregate_views"
+  source_file = "${path.module}/../src/backend/aggregate_views/bootstrap"
   output_path = "${path.module}/aggregate_views_lambda.zip"
-  excludes    = ["__pycache__/**", "*.pyc"]
 }
 
 data "archive_file" "analytics_validator_lambda" {
@@ -13,9 +12,8 @@ data "archive_file" "analytics_validator_lambda" {
 
 data "archive_file" "get_views_lambda" {
   type        = "zip"
-  source_dir  = "${path.module}/../src/backend/get_views"
+  source_file = "${path.module}/../src/backend/get_views/bootstrap"
   output_path = "${path.module}/get_views_lambda.zip"
-  excludes    = ["__pycache__/**", "*.pyc"]
 }
 
 resource "aws_lambda_function" "analytics_validator" {
@@ -35,33 +33,23 @@ resource "aws_lambda_function" "analytics_validator" {
       ANALYTICS_TOPIC_ARN = aws_sns_topic.analytics_events.arn
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
+  }
 }
 
 resource "aws_lambda_function" "get_views" {
   function_name    = "mrembiasz-blog-get-views"
   role             = aws_iam_role.get_views_lambda.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
   filename         = data.archive_file.get_views_lambda.output_path
   source_code_hash = data.archive_file.get_views_lambda.output_base64sha256
-  memory_size      = 768
-  timeout          = 10
-  tags             = local.tags
-
-  environment {
-    variables = {
-      POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
-    }
-  }
-}
-
-resource "aws_lambda_function" "aggregate_views" {
-  function_name    = "mrembiasz-blog-aggregate-views"
-  role             = aws_iam_role.aggregate_views_lambda.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  filename         = data.archive_file.aggregate_views_lambda.output_path
-  source_code_hash = data.archive_file.aggregate_views_lambda.output_base64sha256
+  architectures    = ["arm64"]
   memory_size      = 512
   timeout          = 10
   tags             = local.tags
@@ -70,6 +58,39 @@ resource "aws_lambda_function" "aggregate_views" {
     variables = {
       POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
+  }
+}
+
+resource "aws_lambda_function" "aggregate_views" {
+  function_name    = "mrembiasz-blog-aggregate-views"
+  role             = aws_iam_role.aggregate_views_lambda.arn
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  filename         = data.archive_file.aggregate_views_lambda.output_path
+  source_code_hash = data.archive_file.aggregate_views_lambda.output_base64sha256
+  architectures    = ["arm64"]
+  memory_size      = 512
+  timeout          = 10
+  tags             = local.tags
+
+  environment {
+    variables = {
+      POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
   }
 }
 

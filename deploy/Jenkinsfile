@@ -1,7 +1,5 @@
 def PLAN_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
 def DEPLOY_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
-def BACKEND_PYTHON_PATHS = 'src/backend tests/backend'
-
 def githubCheck(String name, Closure body) {
   publishChecks(
     name: name,
@@ -138,31 +136,11 @@ pipeline {
 
         stage('Backend') {
           stages {
-            stage('Install Backend Tools') {
+            stage('Download Backend Dependencies') {
               steps {
-                container('python') {
+                container('go') {
                   script {
-                    checkedSh(name: 'Install Backend Tools', exec: 'python -m pip install --upgrade pip && python -m pip install -r requirements-backend.txt')
-                  }
-                }
-              }
-            }
-
-            stage('Scan Backend Packages') {
-              steps {
-                container('python') {
-                  script {
-                    checkedSh(name: 'Scan Backend Packages', exec: 'pip-audit --cache-dir /tmp/pip-audit-cache')
-                  }
-                }
-              }
-            }
-
-            stage('Lint Backend') {
-              steps {
-                container('python') {
-                  script {
-                    checkedSh(name: 'Lint Backend', exec: "ruff format --check ${BACKEND_PYTHON_PATHS} && ruff check ${BACKEND_PYTHON_PATHS}")
+                    checkedSh(name: 'Download Backend Dependencies', exec: 'deploy/scripts/download-backend-dependencies.sh')
                   }
                 }
               }
@@ -170,42 +148,38 @@ pipeline {
 
             stage('Run Backend Tests') {
               steps {
-                container('python') {
+                container('go') {
                   script {
-                    checkedSh(name: 'Run Backend Tests', exec: 'pytest tests/backend')
+                    checkedSh(name: 'Run Backend Tests', exec: 'deploy/scripts/test-backend-lambdas.sh')
                   }
                 }
               }
             }
 
-            stage('Test Go Lambdas') {
+            stage('Build Go Lambdas') {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Test Go Lambdas', exec: 'cd src/backend/analytics_validator && go test ./...')
+                    checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
                   }
                 }
               }
             }
           }
         }
+      }
+    }
 
-        stage('Terraform Plan') {
-          steps {
-            script {
-              container('go') {
-                checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
-              }
-
-              checkedAwsSh(
-                name: 'Terraform Plan',
-                container: 'terraform',
-                role: PLAN_ROLE,
-                exec: 'deploy/scripts/terraform-plan.sh',
-                titleFile: 'terraform/tfplan-summary.txt'
-              )
-            }
-          }
+    stage('Terraform Plan') {
+      steps {
+        script {
+          checkedAwsSh(
+            name: 'Terraform Plan',
+            container: 'terraform',
+            role: PLAN_ROLE,
+            exec: 'deploy/scripts/terraform-plan.sh',
+            titleFile: 'terraform/tfplan-summary.txt'
+          )
         }
       }
     }
@@ -224,6 +198,19 @@ pipeline {
                 role: DEPLOY_ROLE,
                 exec: 'deploy/scripts/terraform-apply.sh',
                 titleFile: 'terraform/tfplan-summary.txt'
+              )
+            }
+          }
+        }
+
+        stage('Deploy Backend Lambdas') {
+          steps {
+            script {
+              checkedAwsSh(
+                name: 'Deploy Backend Lambdas',
+                container: 'aws',
+                role: DEPLOY_ROLE,
+                exec: 'deploy/scripts/deploy-backend-lambdas.sh'
               )
             }
           }
