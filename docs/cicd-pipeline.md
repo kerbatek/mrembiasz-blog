@@ -11,7 +11,7 @@ Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
   -> frontend checks/build and Go backend validation in parallel
-  -> SonarQube scan and quality gate
+  -> SonarQube frontend, backend, and Terraform scans with quality gates
   -> Terraform plan
   -> Terraform apply on main
   -> Lambda code deploy on main
@@ -63,14 +63,24 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`SonarQube Scan` runs after validation succeeds using
-`sonar-project.properties`. `SonarQube Quality Gate` then waits for the
-SonarQube server result before Terraform plan can run. Jenkins must have a
-SonarQube server named `SonarQube` configured in the SonarQube Scanner plugin,
-and the SonarQube project must send webhooks to Jenkins so
-`waitForQualityGate` can resume the build.
+SonarQube runs after validation succeeds. It analyzes frontend, backend, and
+Terraform code as separate SonarQube projects so each area has its own scan and
+quality gate GitHub check:
 
-`Terraform Plan` runs after validation and the SonarQube quality gate succeed,
+```text
+mrembiasz-blog-frontend
+mrembiasz-blog-backend
+mrembiasz-blog-terraform
+```
+
+Jenkins must have a SonarQube server named `SonarQube` configured in the
+SonarQube Scanner plugin, and the SonarQube projects must send webhooks to
+Jenkins so `waitForQualityGate` can resume the build.
+If one SonarQube area fails, Jenkins still runs the remaining SonarQube scans
+so GitHub shows which areas passed and failed. Terraform plan and release only
+run when all quality gates pass.
+
+`Terraform Plan` runs after validation and the SonarQube quality gates succeed,
 and assumes:
 
 ```text
@@ -163,8 +173,12 @@ Build Astro
 Download Backend Dependencies
 Run Backend Tests
 Build Go Lambdas
-SonarQube Scan
-SonarQube Quality Gate
+SonarQube Frontend Scan
+SonarQube Frontend Quality Gate
+SonarQube Backend Scan
+SonarQube Backend Quality Gate
+SonarQube Terraform Scan
+SonarQube Terraform Quality Gate
 Terraform Plan
 Terraform Apply
 Deploy Backend Lambdas
