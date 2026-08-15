@@ -26,7 +26,7 @@ resource "aws_lambda_function" "analytics_validator" {
   filename         = data.archive_file.analytics_validator_lambda.output_path
   source_code_hash = data.archive_file.analytics_validator_lambda.output_base64sha256
   architectures    = ["arm64"]
-  memory_size      = 1024
+  memory_size      = 512
   timeout          = 10
   tags             = local.tags
 

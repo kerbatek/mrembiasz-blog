@@ -8,6 +8,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeSNS struct {
@@ -31,30 +33,17 @@ func TestPublishesValidPostViewEvent(t *testing.T) {
 		"topic-arn",
 		client,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if result.StatusCode != 202 {
-		t.Fatalf("status = %d, want 202", result.StatusCode)
-	}
-	if result.Headers["content-type"] != "application/json" {
-		t.Fatalf("content-type = %q", result.Headers["content-type"])
-	}
-	if result.Body != `{"accepted":true}` {
-		t.Fatalf("body = %s", result.Body)
-	}
-	if *client.published[0].TopicArn != "topic-arn" {
-		t.Fatalf("topic arn = %q", *client.published[0].TopicArn)
-	}
+	assert.Equal(t, 202, result.StatusCode)
+	assert.Equal(t, "application/json", result.Headers["content-type"])
+	assert.JSONEq(t, `{"accepted":true}`, result.Body)
+	require.Len(t, client.published, 1)
+	assert.Equal(t, "topic-arn", *client.published[0].TopicArn)
 
 	var message map[string]string
-	if err := json.Unmarshal([]byte(*client.published[0].Message), &message); err != nil {
-		t.Fatal(err)
-	}
-	if message["post_slug"] != "astro-static" {
-		t.Fatalf("post_slug = %q", message["post_slug"])
-	}
+	require.NoError(t, json.Unmarshal([]byte(*client.published[0].Message), &message))
+	assert.Equal(t, "astro-static", message["post_slug"])
 }
 
 func TestPublishesNestedPostSlug(t *testing.T) {
@@ -68,21 +57,14 @@ func TestPublishesNestedPostSlug(t *testing.T) {
 		"topic-arn",
 		client,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if result.StatusCode != 202 {
-		t.Fatalf("status = %d, want 202", result.StatusCode)
-	}
+	assert.Equal(t, 202, result.StatusCode)
+	require.Len(t, client.published, 1)
 
 	var message map[string]string
-	if err := json.Unmarshal([]byte(*client.published[0].Message), &message); err != nil {
-		t.Fatal(err)
-	}
-	if message["post_slug"] != "notes/astro-static" {
-		t.Fatalf("post_slug = %q", message["post_slug"])
-	}
+	require.NoError(t, json.Unmarshal([]byte(*client.published[0].Message), &message))
+	assert.Equal(t, "notes/astro-static", message["post_slug"])
 }
 
 func TestRejectsMissingPathParameters(t *testing.T) {
@@ -92,16 +74,10 @@ func TestRejectsMissingPathParameters(t *testing.T) {
 		"topic-arn",
 		&fakeSNS{},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if result.StatusCode != 400 {
-		t.Fatalf("status = %d, want 400", result.StatusCode)
-	}
-	if result.Body != `{"error":"missing slug"}` {
-		t.Fatalf("body = %s", result.Body)
-	}
+	assert.Equal(t, 400, result.StatusCode)
+	assert.JSONEq(t, `{"error":"missing slug"}`, result.Body)
 }
 
 func TestRejectsMissingPostSlug(t *testing.T) {
@@ -113,13 +89,9 @@ func TestRejectsMissingPostSlug(t *testing.T) {
 		"topic-arn",
 		&fakeSNS{},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if result.StatusCode != 400 {
-		t.Fatalf("status = %d, want 400", result.StatusCode)
-	}
+	assert.Equal(t, 400, result.StatusCode)
 }
 
 func TestPublishFailureBubblesToAPIGatewayRetryOr500(t *testing.T) {
@@ -132,9 +104,7 @@ func TestPublishFailureBubblesToAPIGatewayRetryOr500(t *testing.T) {
 		&fakeSNS{err: errors.New("sns unavailable")},
 	)
 
-	if err == nil || err.Error() != "sns unavailable" {
-		t.Fatalf("err = %v, want sns unavailable", err)
-	}
+	require.EqualError(t, err, "sns unavailable")
 }
 
 func TestReusesSNSClientAcrossWarmInvocations(t *testing.T) {
@@ -143,15 +113,10 @@ func TestReusesSNSClientAcrossWarmInvocations(t *testing.T) {
 	t.Cleanup(func() { publisher = nil })
 
 	first, err := getPublisher(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	second, err := getPublisher(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if first != existing || second != existing {
-		t.Fatal("publisher was not reused")
-	}
+	assert.Same(t, existing, first)
+	assert.Same(t, existing, second)
 }
