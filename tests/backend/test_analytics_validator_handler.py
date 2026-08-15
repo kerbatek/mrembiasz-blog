@@ -1,4 +1,7 @@
 import json
+from types import SimpleNamespace
+
+import pytest
 
 from src.backend.analytics_validator.handler import handle_event
 
@@ -14,6 +17,16 @@ class FakeSNS:
 class FailingSNS:
     def publish(self, **_kwargs):
         raise RuntimeError("sns unavailable")
+
+
+class FakeBoto3:
+    def __init__(self):
+        self.clients = []
+
+    def client(self, service_name):
+        client = {"service_name": service_name}
+        self.clients.append(client)
+        return client
 
 
 def test_publishes_valid_post_view_event():
@@ -67,13 +80,24 @@ def test_rejects_missing_post_slug():
 
 
 def test_publish_failure_bubbles_to_api_gateway_retry_or_500():
-    try:
+    with pytest.raises(RuntimeError, match="sns unavailable"):
         handle_event(
             {"pathParameters": {"slug": "astro-static"}},
             "topic-arn",
             FailingSNS(),
         )
-    except RuntimeError as error:
-        assert str(error) == "sns unavailable"
-    else:
-        raise AssertionError("expected RuntimeError")
+
+
+def test_reuses_sns_client_across_warm_invocations(monkeypatch):
+    from src.backend.analytics_validator import handler
+
+    fake_boto3 = FakeBoto3()
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "boto3",
+        SimpleNamespace(client=fake_boto3.client),
+    )
+    monkeypatch.setattr(handler, "_sns_client", None)
+
+    assert handler.get_sns_client() is handler.get_sns_client()
+    assert [client["service_name"] for client in fake_boto3.clients] == ["sns"]
