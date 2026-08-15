@@ -38,9 +38,7 @@ resource "aws_iam_policy" "jenkins_deploy" {
           "lambda:UpdateFunctionCode",
         ]
         Resource = [
-          aws_lambda_function.aggregate_views.arn,
-          aws_lambda_function.analytics_validator.arn,
-          aws_lambda_function.get_views.arn,
+          for lambda in aws_lambda_function.backend_lambda : lambda.arn
         ]
       },
     ]
@@ -52,7 +50,7 @@ resource "aws_iam_role_policy_attachment" "jenkins_deploy" {
   policy_arn = aws_iam_policy.jenkins_deploy.arn
 }
 
-data "aws_iam_policy_document" "aggregate_views_lambda_assume_role" {
+data "aws_iam_policy_document" "lambda_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -65,7 +63,7 @@ data "aws_iam_policy_document" "aggregate_views_lambda_assume_role" {
 
 resource "aws_iam_role" "aggregate_views_lambda" {
   name               = "mrembiasz-blog-aggregate-views-lambda"
-  assume_role_policy = data.aws_iam_policy_document.aggregate_views_lambda_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
 
@@ -102,20 +100,9 @@ resource "aws_iam_role_policy_attachment" "aggregate_views_lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-data "aws_iam_policy_document" "analytics_validator_lambda_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
 resource "aws_iam_role" "analytics_validator_lambda" {
   name               = "mrembiasz-blog-analytics-validator-lambda"
-  assume_role_policy = data.aws_iam_policy_document.analytics_validator_lambda_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
 
@@ -141,20 +128,9 @@ resource "aws_iam_role_policy_attachment" "analytics_validator_lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-data "aws_iam_policy_document" "get_views_lambda_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
 resource "aws_iam_role" "get_views_lambda" {
   name               = "mrembiasz-blog-get-views-lambda"
-  assume_role_policy = data.aws_iam_policy_document.get_views_lambda_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
 

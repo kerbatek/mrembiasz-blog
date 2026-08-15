@@ -1,7 +1,7 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -eu
 
-deploy_lambda() {
+update_lambda() {
   function_name="$1"
   package_path="$2"
 
@@ -9,10 +9,23 @@ deploy_lambda() {
     --function-name "$function_name" \
     --zip-file "fileb://${package_path}" \
     >/dev/null
+}
 
+wait_lambda() {
+  function_name="$1"
   aws lambda wait function-updated --function-name "$function_name"
 }
 
-deploy_lambda "mrembiasz-blog-aggregate-views" "deploy/backend-lambdas/aggregate_views.zip"
-deploy_lambda "mrembiasz-blog-analytics-validator" "deploy/backend-lambdas/analytics_validator.zip"
-deploy_lambda "mrembiasz-blog-get-views" "deploy/backend-lambdas/get_views.zip"
+lambda_dirs=(src/backend/lambdas/*)
+
+for lambda_dir in "${lambda_dirs[@]}"; do
+  lambda_name="$(basename "$lambda_dir")"
+  function_name="mrembiasz-blog-${lambda_name//_/-}"
+  update_lambda "$function_name" "deploy/backend-lambdas/${lambda_name}.zip"
+done
+
+for lambda_dir in "${lambda_dirs[@]}"; do
+  lambda_name="$(basename "$lambda_dir")"
+  function_name="mrembiasz-blog-${lambda_name//_/-}"
+  wait_lambda "$function_name"
+done

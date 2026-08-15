@@ -31,7 +31,7 @@ func response(statusCode int, body map[string]any) (events.APIGatewayV2HTTPRespo
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: statusCode,
 		Headers: map[string]string{
-			"cache-control": "public, max-age=60",
+			"cache-control": "public, max-age=5",
 			"content-type":  "application/json",
 		},
 		Body: string(payload),
