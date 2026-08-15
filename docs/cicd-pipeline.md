@@ -170,10 +170,8 @@ readability and debugging, but they are not individually required:
 ```text
 Frontend
 Backend
-SonarQube Frontend
-SonarQube Backend
 SonarQube Terraform
-Terraform
+Terraform Plan
 Release
 ```
 

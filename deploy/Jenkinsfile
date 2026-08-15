@@ -84,28 +84,28 @@ def checkedAwsSh(Map args) {
   }
 }
 
-def checkedSonarScan(String label, String component) {
+def checkedSonarScan(Map args) {
   container('sonarqube') {
     withSonarQubeEnv('SonarQube') {
       checkedSh(
-        name: "SonarQube ${label} Scan",
-        checkName: label,
-        exec: "deploy/scripts/sonarqube-scan.sh ${component}",
-        textFile: "sonar-${component}-dashboard-url.txt"
+        name: args.name,
+        checkName: args.checkName,
+        exec: "deploy/scripts/sonarqube-scan.sh ${args.component}",
+        textFile: "sonar-${args.component}-dashboard-url.txt"
       )
     }
   }
 }
 
-def checkedQualityGate(String name, String component) {
-  githubCheck(name.replace('SonarQube ', '').replace(' Quality Gate', '')) {
-    def dashboardUrlFile = "sonar-${component}-dashboard-url.txt"
+def checkedQualityGate(Map args) {
+  githubCheck(args.checkName) {
+    def dashboardUrlFile = "sonar-${args.component}-dashboard-url.txt"
     if (!fileExists(dashboardUrlFile)) {
-      return "${name}: skipped because scan failed."
+      return "${args.name}: skipped because scan failed."
     }
     def qualityGate = waitForQualityGate abortPipeline: true
     return [
-      summary: "${name}: ${qualityGate.status}",
+      summary: "${args.name}: ${qualityGate.status}",
       text: readFile(dashboardUrlFile).trim()
     ]
   }
@@ -208,7 +208,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan('Frontend', 'frontend')
+                checkedSonarScan(name: 'SonarQube Frontend Scan', checkName: 'Frontend', component: 'frontend')
               }
             }
           }
@@ -218,7 +218,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Frontend Quality Gate', 'frontend')
+                checkedQualityGate(name: 'SonarQube Frontend Quality Gate', checkName: 'Frontend', component: 'frontend')
               }
             }
           }
@@ -228,7 +228,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan('Backend', 'backend')
+                checkedSonarScan(name: 'SonarQube Backend Scan', checkName: 'Backend', component: 'backend')
               }
             }
           }
@@ -238,7 +238,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Backend Quality Gate', 'backend')
+                checkedQualityGate(name: 'SonarQube Backend Quality Gate', checkName: 'Backend', component: 'backend')
               }
             }
           }
@@ -248,7 +248,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan('Terraform', 'terraform')
+                checkedSonarScan(name: 'SonarQube Terraform Scan', checkName: 'SonarQube Terraform', component: 'terraform')
               }
             }
           }
@@ -258,7 +258,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Terraform Quality Gate', 'terraform')
+                checkedQualityGate(name: 'SonarQube Terraform Quality Gate', checkName: 'SonarQube Terraform', component: 'terraform')
               }
             }
           }
@@ -274,7 +274,7 @@ pipeline {
         script {
           checkedAwsSh(
             name: 'Terraform Plan',
-            checkName: 'Terraform',
+            checkName: 'Terraform Plan',
             container: 'terraform',
             role: PLAN_ROLE,
             exec: 'deploy/scripts/terraform-plan.sh',
