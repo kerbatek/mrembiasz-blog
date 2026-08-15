@@ -79,6 +79,13 @@ def checkedAwsSh(Map args) {
   }
 }
 
+def checkedQualityGate(String name) {
+  githubCheck(name) {
+    def qualityGate = waitForQualityGate abortPipeline: true
+    return "Quality Gate: ${qualityGate.status}"
+  }
+}
+
 pipeline {
   agent {
     kubernetes {
@@ -166,6 +173,26 @@ pipeline {
               }
             }
           }
+        }
+      }
+    }
+
+    stage('SonarQube Scan') {
+      steps {
+        container('sonarqube') {
+          script {
+            withSonarQubeEnv('SonarQube') {
+              checkedSh(name: 'SonarQube Scan', exec: 'sonar-scanner -Dsonar.projectVersion="${GIT_COMMIT:-local}"')
+            }
+          }
+        }
+      }
+    }
+
+    stage('SonarQube Quality Gate') {
+      steps {
+        script {
+          checkedQualityGate('SonarQube Quality Gate')
         }
       }
     }

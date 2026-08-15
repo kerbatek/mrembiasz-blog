@@ -11,6 +11,7 @@ Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
   -> frontend checks/build and Go backend validation in parallel
+  -> SonarQube scan and quality gate
   -> Terraform plan
   -> Terraform apply on main
   -> Lambda code deploy on main
@@ -62,7 +63,15 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`Terraform Plan` runs after validation succeeds and assumes:
+`SonarQube Scan` runs after validation succeeds using
+`sonar-project.properties`. `SonarQube Quality Gate` then waits for the
+SonarQube server result before Terraform plan can run. Jenkins must have a
+SonarQube server named `SonarQube` configured in the SonarQube Scanner plugin,
+and the SonarQube project must send webhooks to Jenkins so
+`waitForQualityGate` can resume the build.
+
+`Terraform Plan` runs after validation and the SonarQube quality gate succeed,
+and assumes:
 
 ```text
 arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan
@@ -154,6 +163,8 @@ Build Astro
 Download Backend Dependencies
 Run Backend Tests
 Build Go Lambdas
+SonarQube Scan
+SonarQube Quality Gate
 Terraform Plan
 Terraform Apply
 Deploy Backend Lambdas

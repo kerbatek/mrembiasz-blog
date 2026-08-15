@@ -37,6 +37,11 @@ spec:
       command:
         - cat
       tty: true
+    - name: sonarqube
+      image: sonarsource/sonar-scanner-cli:latest
+      command:
+        - cat
+      tty: true
     - name: aws
       image: amazon/aws-cli:2.28.21
       command:
