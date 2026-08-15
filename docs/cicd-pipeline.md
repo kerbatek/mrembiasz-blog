@@ -10,8 +10,10 @@ The pipeline runs on ephemeral Kubernetes agent Pods defined in
 Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
-  -> frontend checks/build, backend tests, and Terraform plan in parallel
+  -> frontend checks/build and Go backend validation in parallel
+  -> Terraform plan
   -> Terraform apply on main
+  -> Lambda code deploy on main
   -> S3 sync on main
   -> CloudFront invalidation on main
   -> smoke test on main
@@ -29,16 +31,15 @@ Lint Frontend                 -> npm run lint:frontend
 Build Astro                   -> npm run build
 ```
 
-Backend checks run sequentially in the `python` container:
+Backend stages run sequentially in the `go` container:
 
 ```text
-Install Backend Tools -> python -m pip install --upgrade pip
-                      -> python -m pip install -r requirements-backend.txt
-Scan Backend Packages -> pip-audit --cache-dir /tmp/pip-audit-cache
-Lint Backend          -> ruff format --check src/backend tests/backend
-                      -> ruff check src/backend tests/backend
-Run Backend Tests     -> pytest tests/backend
+Run Backend Tests -> deploy/scripts/test-backend-lambdas.sh
+Build Go Lambdas  -> deploy/scripts/build-backend-lambdas.sh
 ```
+
+`Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
+Terraform reads during plan and that the release stage deploys on `main`.
 
 Each Jenkins stage publishes a GitHub check run with the stage name through the
 Jenkins Checks API and GitHub Checks plugins. The check links back to the
@@ -56,8 +57,7 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`Terraform Plan` runs in parallel with the frontend path in the `terraform`
-container and assumes:
+`Terraform Plan` runs after validation succeeds and assumes:
 
 ```text
 arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan
@@ -79,6 +79,10 @@ arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy
 `Deploy Static Site` also runs only on `main` with the deploy role. It syncs
 `dist/` to the private S3 site bucket, creates a CloudFront invalidation, and
 waits for that invalidation to complete.
+
+`Deploy Backend Lambdas` runs only on `main` with the deploy role. It updates
+the Lambda function code from `deploy/backend-lambdas/*.zip` with
+`aws lambda update-function-code` and waits for each function update to finish.
 
 `Smoke Test Website` runs after the invalidation completes. The Astro build
 embeds the Jenkins `GIT_COMMIT` into a `deploy-id` meta tag, and the smoke test
@@ -113,9 +117,10 @@ mrembiasz-blog-jenkins-deploy
   trusts: https://jenkins.mrembiasz.pl/job/mrembiasz-blog/job/main/
 ```
 
-PR and branch builds can build Astro and run Terraform plan, but they cannot
-assume the deploy role. Only the `main` Jenkins subject can mutate AWS
-infrastructure or publish the website.
+PR and branch builds can build Astro, test/build Go Lambdas, and run Terraform
+plan, but only after validation succeeds. They cannot assume the deploy role.
+Only the `main` Jenkins subject can mutate AWS infrastructure, update Lambda
+code, or publish the website.
 
 ## GitHub merge boundary
 
@@ -141,12 +146,11 @@ Install Frontend Dependencies
 Scan Frontend Packages
 Lint Frontend
 Build Astro
-Install Backend Tools
-Lint Backend
-Scan Backend Packages
 Run Backend Tests
+Build Go Lambdas
 Terraform Plan
 Terraform Apply
+Deploy Backend Lambdas
 Deploy Static Site
 Smoke Test Website
 ```
@@ -198,10 +202,11 @@ the website bucket, create CloudFront invalidations, or write IAM changes.
 - read/write access to the Terraform state object and `.tflock` object
 - AWS managed S3, CloudFront, and ACM permissions used to create and update
   this site's infrastructure
+- Lambda code update permissions for this app's backend functions
 - app IAM bootstrap permissions for the `mrembiasz-blog-deploy` policy and its
   attachment to the deploy role
 
 This role is intentionally broader because `terraform apply` creates and
-updates AWS resources, and the static deployment publishes files to S3 and
-invalidates CloudFront. Its OIDC trust is limited to the `main` Jenkins subject
-so PR and branch builds cannot assume it.
+updates AWS resources, backend deployment updates Lambda code, and the static
+deployment publishes files to S3 and invalidates CloudFront. Its OIDC trust is
+limited to the `main` Jenkins subject so PR and branch builds cannot assume it.

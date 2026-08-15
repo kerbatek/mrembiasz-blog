@@ -145,25 +145,31 @@ pipeline {
                 }
               }
             }
-          }
-        }
 
-        stage('Terraform Plan') {
-          steps {
-            script {
-              container('go') {
-                checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
+            stage('Build Go Lambdas') {
+              steps {
+                container('go') {
+                  script {
+                    checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
+                  }
+                }
               }
-
-              checkedAwsSh(
-                name: 'Terraform Plan',
-                container: 'terraform',
-                role: PLAN_ROLE,
-                exec: 'deploy/scripts/terraform-plan.sh',
-                titleFile: 'terraform/tfplan-summary.txt'
-              )
             }
           }
+        }
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        script {
+          checkedAwsSh(
+            name: 'Terraform Plan',
+            container: 'terraform',
+            role: PLAN_ROLE,
+            exec: 'deploy/scripts/terraform-plan.sh',
+            titleFile: 'terraform/tfplan-summary.txt'
+          )
         }
       }
     }

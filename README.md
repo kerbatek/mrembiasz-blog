@@ -21,10 +21,13 @@ need Playwright Chromium available.
 npm run lint:frontend
 npm run scan:frontend:packages
 npm run build
+deploy/scripts/test-backend-lambdas.sh
+deploy/scripts/build-backend-lambdas.sh
 ```
 
-Jenkins runs the frontend checks and Terraform plan in parallel before
-main-only Terraform apply and static site deployment.
+Jenkins runs frontend checks and Go backend test/build validation in parallel,
+then Terraform plan before main-only Terraform apply, Lambda code deployment,
+and static site deployment.
 
 ## Documentation
 
