@@ -39,10 +39,12 @@ Run Backend Tests             -> deploy/scripts/test-backend-lambdas.sh
 Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 ```
 
+`Run Backend Tests` runs each backend Lambda module in parallel internally.
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
 Terraform reads during plan and that the release stage deploys on `main`.
-The Go container stores `GOMODCACHE` and `GOCACHE` under `/home/jenkins/agent/.go`
-so backend dependency, test, and build stages share caches within the same Pod.
+The Jenkins agent Pod mounts the repo cache PVC at `/cache`. The node container
+uses it for npm's cache, the Go container uses it for `GOMODCACHE` and
+`GOCACHE`, and the Terraform container uses it for provider plugins.
 
 Each Jenkins stage publishes a GitHub check run with the stage name through the
 Jenkins Checks API and GitHub Checks plugins. The check links back to the

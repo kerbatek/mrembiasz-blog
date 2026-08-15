@@ -4,11 +4,23 @@ spec:
   containers:
     - name: node
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      env:
+        - name: npm_config_cache
+          value: /cache/npm
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
       command:
         - cat
       tty: true
     - name: terraform
       image: hashicorp/terraform:1.13
+      env:
+        - name: TF_PLUGIN_CACHE_DIR
+          value: /cache/terraform/plugins
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
       command:
         - cat
       tty: true
@@ -16,9 +28,12 @@ spec:
       image: kerbatek/mrembiasz-blog:go-1.25-zip
       env:
         - name: GOMODCACHE
-          value: /home/jenkins/agent/.go/pkg/mod
+          value: /cache/go/pkg/mod
         - name: GOCACHE
-          value: /home/jenkins/agent/.go/build
+          value: /cache/go/build
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
       command:
         - cat
       tty: true
@@ -27,3 +42,7 @@ spec:
       command:
         - cat
       tty: true
+  volumes:
+    - name: repo-cache
+      persistentVolumeClaim:
+        claimName: mrembiasz-blog-cache

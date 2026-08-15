@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
+[ -z "${TF_PLUGIN_CACHE_DIR:-}" ] || mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
 terraform -chdir=terraform init -input=false
 terraform -chdir=terraform fmt -check
 terraform -chdir=terraform validate
