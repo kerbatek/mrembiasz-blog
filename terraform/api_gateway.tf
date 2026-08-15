@@ -29,13 +29,13 @@ resource "aws_apigatewayv2_integration" "get_views" {
 
 resource "aws_apigatewayv2_route" "post_view" {
   api_id    = aws_apigatewayv2_api.analytics.id
-  route_key = "POST /api/views/{slug}"
+  route_key = "POST /api/views/{slug+}"
   target    = "integrations/${aws_apigatewayv2_integration.analytics_validator.id}"
 }
 
 resource "aws_apigatewayv2_route" "get_views" {
   api_id    = aws_apigatewayv2_api.analytics.id
-  route_key = "GET /api/views/{slug}"
+  route_key = "GET /api/views/{slug+}"
   target    = "integrations/${aws_apigatewayv2_integration.get_views.id}"
 }
 

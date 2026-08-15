@@ -32,6 +32,22 @@ class GetViewsHandlerTest(unittest.TestCase):
             {"post_slug": {"S": "jenkins-aws-oidc"}},
         )
 
+    def test_returns_nested_post_view_count(self):
+        client = FakeDynamoDB({"view_count": {"N": "7"}})
+
+        result = handle_event(
+            {"pathParameters": {"slug": "notes/astro-static"}},
+            "post-views",
+            client,
+        )
+
+        self.assertEqual(result["statusCode"], 200)
+        self.assertEqual(json.loads(result["body"]), {"views": 7})
+        self.assertEqual(
+            client.gets[0]["Key"],
+            {"post_slug": {"S": "notes/astro-static"}},
+        )
+
     def test_returns_zero_for_missing_counter(self):
         result = handle_event(
             {"pathParameters": {"slug": "new-post"}},
