@@ -12,11 +12,6 @@ spec:
       command:
         - cat
       tty: true
-    - name: python
-      image: python:3.12-slim
-      command:
-        - cat
-      tty: true
     - name: go
       image: golang:1.25
       command:

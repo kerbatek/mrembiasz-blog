@@ -58,9 +58,9 @@ function needs a different setting.
 Terraform will package the compiled `bootstrap` binary. CI and local deploys
 must build Lambda binaries before Terraform plan/apply.
 
-The analytics validator is the first Lambda migrated because it is already
-measured on the request path. The aggregate worker and read-side views Lambda
-will be migrated next.
+The analytics validator was migrated first because it was already measured on
+the request path. The aggregate worker and read-side views Lambda are also Go
+Lambdas, so the backend Lambda runtime is now consistent across functions.
 
 ## Rationale
 
@@ -79,8 +79,9 @@ with memory, so configured memory still materially affected latency.
 ## Consequences
 
 The request-path validator has lower cold start latency and lower memory use.
-The remaining backend Lambdas are expected to get similar operational benefits,
-but should still be checked with CloudWatch metrics after migration.
+The aggregate worker and read-side views Lambda should be checked with
+CloudWatch metrics after deployment to confirm their actual latency and memory
+profiles.
 
 512 MB is the default memory target, not a permanent ceiling. Revisit it with
 CloudWatch duration, billed duration, and max memory metrics after each Lambda
