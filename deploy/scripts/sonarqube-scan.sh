@@ -24,6 +24,7 @@ esac
 
 log_file="sonar-${component}-scanner.log"
 check_text_file="sonar-${component}-dashboard-url.txt"
+rm -f "$log_file" "$check_text_file"
 
 sonar-scanner \
   -Dsonar.projectKey="mrembiasz-blog-${component}" \

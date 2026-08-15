@@ -97,8 +97,11 @@ def checkedSonarScan(String label, String component) {
   }
 }
 
-def checkedQualityGate(String name) {
+def checkedQualityGate(String name, String component) {
   githubCheck(name) {
+    if (!fileExists("sonar-${component}-dashboard-url.txt")) {
+      return 'Skipped because SonarQube scan failed.'
+    }
     def qualityGate = waitForQualityGate abortPipeline: true
     return "Quality Gate: ${qualityGate.status}"
   }
@@ -211,7 +214,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Frontend Quality Gate')
+                checkedQualityGate('SonarQube Frontend Quality Gate', 'frontend')
               }
             }
           }
@@ -231,7 +234,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Backend Quality Gate')
+                checkedQualityGate('SonarQube Backend Quality Gate', 'backend')
               }
             }
           }
@@ -251,7 +254,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate('SonarQube Terraform Quality Gate')
+                checkedQualityGate('SonarQube Terraform Quality Gate', 'terraform')
               }
             }
           }

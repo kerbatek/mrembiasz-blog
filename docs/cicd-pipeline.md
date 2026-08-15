@@ -73,6 +73,8 @@ mrembiasz-blog-backend
 mrembiasz-blog-terraform
 ```
 
+Those projects must already exist in SonarQube, or the Jenkins token must have
+permission to create projects during analysis.
 Jenkins must have a SonarQube server named `SonarQube` configured in the
 SonarQube Scanner plugin, and the SonarQube projects must send webhooks to
 Jenkins so `waitForQualityGate` can resume the build.
