@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,16 @@ class FakeDynamoDB:
 
     def update_item(self, **kwargs):
         self.updates.append(kwargs)
+
+
+class FakeBoto3:
+    def __init__(self):
+        self.clients = []
+
+    def client(self, service_name):
+        client = {"service_name": service_name}
+        self.clients.append(client)
+        return client
 
 
 def test_updates_post_view_counter_from_raw_sqs_message():
@@ -124,3 +135,18 @@ def test_reraises_failed_record_without_message_id(caplog):
 
     with caplog.at_level(logging.WARNING), pytest.raises(ValueError):
         handle_event(event, "post-views", client)
+
+
+def test_reuses_dynamodb_client_across_warm_invocations(monkeypatch):
+    from src.backend.aggregate_views import handler
+
+    fake_boto3 = FakeBoto3()
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "boto3",
+        SimpleNamespace(client=fake_boto3.client),
+    )
+    monkeypatch.setattr(handler, "_dynamodb_client", None)
+
+    assert handler.get_dynamodb_client() is handler.get_dynamodb_client()
+    assert [client["service_name"] for client in fake_boto3.clients] == ["dynamodb"]

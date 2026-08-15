@@ -26,7 +26,7 @@ resource "aws_lambda_function" "analytics_validator" {
   runtime          = "python3.12"
   filename         = data.archive_file.analytics_validator_lambda.output_path
   source_code_hash = data.archive_file.analytics_validator_lambda.output_base64sha256
-  memory_size      = 256
+  memory_size      = 1024
   timeout          = 10
   tags             = local.tags
 
@@ -44,6 +44,7 @@ resource "aws_lambda_function" "get_views" {
   runtime          = "python3.12"
   filename         = data.archive_file.get_views_lambda.output_path
   source_code_hash = data.archive_file.get_views_lambda.output_base64sha256
+  memory_size      = 768
   timeout          = 10
   tags             = local.tags
 
@@ -61,7 +62,7 @@ resource "aws_lambda_function" "aggregate_views" {
   runtime          = "python3.12"
   filename         = data.archive_file.aggregate_views_lambda.output_path
   source_code_hash = data.archive_file.aggregate_views_lambda.output_base64sha256
-  memory_size      = 256
+  memory_size      = 512
   timeout          = 10
   tags             = local.tags
 
