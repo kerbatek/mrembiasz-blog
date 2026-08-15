@@ -7,9 +7,8 @@ data "archive_file" "aggregate_views_lambda" {
 
 data "archive_file" "analytics_validator_lambda" {
   type        = "zip"
-  source_dir  = "${path.module}/../src/backend/analytics_validator"
+  source_file = "${path.module}/../src/backend/analytics_validator/bootstrap"
   output_path = "${path.module}/analytics_validator_lambda.zip"
-  excludes    = ["__pycache__/**", "*.pyc"]
 }
 
 data "archive_file" "get_views_lambda" {
@@ -22,10 +21,11 @@ data "archive_file" "get_views_lambda" {
 resource "aws_lambda_function" "analytics_validator" {
   function_name    = "mrembiasz-blog-analytics-validator"
   role             = aws_iam_role.analytics_validator_lambda.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
   filename         = data.archive_file.analytics_validator_lambda.output_path
   source_code_hash = data.archive_file.analytics_validator_lambda.output_base64sha256
+  architectures    = ["arm64"]
   memory_size      = 1024
   timeout          = 10
   tags             = local.tags

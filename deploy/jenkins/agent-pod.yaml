@@ -17,6 +17,11 @@ spec:
       command:
         - cat
       tty: true
+    - name: go
+      image: golang:1.25
+      command:
+        - cat
+      tty: true
     - name: aws
       image: amazon/aws-cli:2.28.21
       command:

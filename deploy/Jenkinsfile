@@ -177,12 +177,26 @@ pipeline {
                 }
               }
             }
+
+            stage('Test Go Lambdas') {
+              steps {
+                container('go') {
+                  script {
+                    checkedSh(name: 'Test Go Lambdas', exec: 'cd src/backend/analytics_validator && go test ./...')
+                  }
+                }
+              }
+            }
           }
         }
 
         stage('Terraform Plan') {
           steps {
             script {
+              container('go') {
+                checkedSh(name: 'Build Go Lambdas', exec: 'deploy/scripts/build-backend-lambdas.sh')
+              }
+
               checkedAwsSh(
                 name: 'Terraform Plan',
                 container: 'terraform',
