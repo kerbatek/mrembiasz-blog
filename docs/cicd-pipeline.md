@@ -11,6 +11,7 @@ Git push or pull request
   -> Jenkins multibranch job
   -> ephemeral Kubernetes agent Pod
   -> frontend checks/build and Go backend validation in parallel
+  -> SonarQube frontend, backend, and Terraform scans with quality gates
   -> Terraform plan
   -> Terraform apply on main
   -> Lambda code deploy on main
@@ -62,7 +63,45 @@ frontend code before the site is built.
 `scan:frontend:packages` runs `npm audit --audit-level=high` against the locked
 frontend dependency graph. CI fails on high or critical npm advisories.
 
-`Terraform Plan` runs after validation succeeds and assumes:
+SonarQube runs after validation succeeds. It analyzes frontend, backend, and
+Terraform code as separate SonarQube projects so each area has its own scan and
+quality gate GitHub check:
+
+```text
+mrembiasz-blog-frontend
+mrembiasz-blog-backend
+mrembiasz-blog-terraform
+```
+
+Those projects must already exist in SonarQube, or the Jenkins token must have
+permission to create projects during analysis.
+Jenkins must have a SonarQube server named `SonarQube` configured in the
+SonarQube Scanner plugin, and the SonarQube projects must send webhooks to
+Jenkins so `waitForQualityGate` can resume the build.
+PR builds run the checked-out scanner script with the SonarQube token injected.
+That is an accepted risk for this project because the token is limited to
+SonarQube analysis and is not treated like an AWS deploy credential.
+If one SonarQube area fails, Jenkins still runs the remaining SonarQube scans
+so GitHub shows which areas passed and failed. Terraform plan and release only
+run when all quality gates pass.
+
+The intended SonarQube quality gate is enforced on new code only:
+
+```text
+Issues                       is greater than       0
+Security Hotspots Reviewed   is less than          100%
+Duplicated Lines (%)         is greater than       3.0%
+```
+
+The scan does not set `sonar.projectVersion`; non-`main` branch analyses use
+`main` as `sonar.newCode.referenceBranch` instead of advancing the baseline on
+every commit.
+
+Coverage is intentionally not part of the gate yet because CI does not publish
+frontend or backend coverage reports to SonarQube.
+
+`Terraform Plan` runs after validation and the SonarQube quality gates succeed,
+and assumes:
 
 ```text
 arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan
@@ -143,22 +182,15 @@ Jenkins
 ```
 
 That aggregate check represents the full Jenkins pipeline result, so it is the
-only required merge check. Stage-level GitHub Checks are also published for
+only required merge check. Area-level GitHub Checks are also published for
 readability and debugging, but they are not individually required:
 
 ```text
-Install Frontend Dependencies
-Scan Frontend Packages
-Lint Frontend
-Build Astro
-Download Backend Dependencies
-Run Backend Tests
-Build Go Lambdas
+Frontend
+Backend
+SonarQube Terraform
 Terraform Plan
-Terraform Apply
-Deploy Backend Lambdas
-Deploy Static Site
-Smoke Test Website
+Release
 ```
 
 The legacy GitHub Status API context is disabled in Jenkins Branch Source using
