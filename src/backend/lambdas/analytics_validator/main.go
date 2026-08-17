@@ -20,6 +20,8 @@ type snsPublisher interface {
 
 var publisher snsPublisher
 
+const postViewEventType = "post_view"
+
 type analyticsEvent struct {
 	EventType  string `json:"event_type"`
 	PostSlug   string `json:"post_slug"`
@@ -53,6 +55,27 @@ func parsePostSlug(request events.APIGatewayV2HTTPRequest) (string, error) {
 	return postSlug, nil
 }
 
+func parseEventType(request events.APIGatewayV2HTTPRequest) (string, error) {
+	eventType := postViewEventType
+	if strings.TrimSpace(request.Body) != "" {
+		var body struct {
+			EventType string `json:"event_type"`
+		}
+		if err := json.Unmarshal([]byte(request.Body), &body); err != nil {
+			return "", errors.New("invalid JSON body")
+		}
+		if strings.TrimSpace(body.EventType) != "" {
+			eventType = strings.TrimSpace(body.EventType)
+		}
+	}
+
+	if eventType != postViewEventType {
+		return "", errors.New("unsupported event_type")
+	}
+
+	return eventType, nil
+}
+
 func header(request events.APIGatewayV2HTTPRequest, name string) string {
 	for key, value := range request.Headers {
 		if strings.EqualFold(key, name) {
@@ -62,9 +85,9 @@ func header(request events.APIGatewayV2HTTPRequest, name string) string {
 	return ""
 }
 
-func buildAnalyticsEvent(request events.APIGatewayV2HTTPRequest, postSlug string, now time.Time) analyticsEvent {
+func buildAnalyticsEvent(request events.APIGatewayV2HTTPRequest, eventType string, postSlug string, now time.Time) analyticsEvent {
 	return analyticsEvent{
-		EventType:  "post_view",
+		EventType:  eventType,
 		PostSlug:   postSlug,
 		ReceivedAt: now.UTC().Format(time.RFC3339Nano),
 		ClientIP:   strings.TrimSpace(request.RequestContext.HTTP.SourceIP),
@@ -79,7 +102,12 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest, 
 		return response(400, map[string]any{"error": err.Error()})
 	}
 
-	message, err := json.Marshal(buildAnalyticsEvent(request, postSlug, now))
+	eventType, err := parseEventType(request)
+	if err != nil {
+		return response(400, map[string]any{"error": err.Error()})
+	}
+
+	message, err := json.Marshal(buildAnalyticsEvent(request, eventType, postSlug, now))
 	if err != nil {
 		return events.APIGatewayV2HTTPResponse{}, err
 	}

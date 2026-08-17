@@ -23,7 +23,12 @@ type dynamoUpdater interface {
 
 var dynamodbClient dynamoUpdater
 
-func parseMessage(record events.SQSMessage) (string, error) {
+type postViewEvent struct {
+	PostSlug   string
+	ReceivedAt time.Time
+}
+
+func parseMessage(record events.SQSMessage, fallbackReceivedAt time.Time) (postViewEvent, error) {
 	body := []byte(record.Body)
 
 	var envelope struct {
@@ -34,18 +39,31 @@ func parseMessage(record events.SQSMessage) (string, error) {
 	}
 
 	var message struct {
-		PostSlug string `json:"post_slug"`
+		PostSlug   string `json:"post_slug"`
+		ReceivedAt string `json:"received_at"`
 	}
 	if err := json.Unmarshal(body, &message); err != nil {
-		return "", err
+		return postViewEvent{}, err
 	}
 
 	postSlug := strings.TrimSpace(message.PostSlug)
 	if postSlug == "" {
-		return "", errors.New("missing post_slug")
+		return postViewEvent{}, errors.New("missing post_slug")
 	}
 
-	return postSlug, nil
+	receivedAt := fallbackReceivedAt
+	if strings.TrimSpace(message.ReceivedAt) != "" {
+		var err error
+		receivedAt, err = time.Parse(time.RFC3339Nano, strings.TrimSpace(message.ReceivedAt))
+		if err != nil {
+			return postViewEvent{}, errors.New("invalid received_at")
+		}
+	}
+
+	return postViewEvent{
+		PostSlug:   postSlug,
+		ReceivedAt: receivedAt,
+	}, nil
 }
 
 func updateViewCount(ctx context.Context, client dynamoUpdater, tableName string, postSlug string, now time.Time) error {
@@ -71,9 +89,9 @@ func handleRequest(ctx context.Context, event events.SQSEvent, tableName string,
 	response := events.SQSEventResponse{}
 
 	for _, record := range event.Records {
-		postSlug, err := parseMessage(record)
+		postView, err := parseMessage(record, now)
 		if err == nil {
-			err = updateViewCount(ctx, client, tableName, postSlug, now)
+			err = updateViewCount(ctx, client, tableName, postView.PostSlug, postView.ReceivedAt)
 		}
 		if err == nil {
 			continue

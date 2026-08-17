@@ -23,8 +23,9 @@ validator Lambda
   -> Athena queries
 ```
 
-The current validated analytics event is intentionally small but enriched by the
-validator before fanout:
+The current validated analytics event is intentionally small. The validator
+allows only `post_view` events for now, enriches the accepted event, and then
+fans it out:
 
 ```json
 {

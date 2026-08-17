@@ -87,6 +87,40 @@ func TestPublishesNestedPostSlug(t *testing.T) {
 	assert.Equal(t, "notes/astro-static", message.PostSlug)
 }
 
+func TestRejectsUnsupportedEventType(t *testing.T) {
+	result, err := handleRequest(
+		context.Background(),
+		events.APIGatewayV2HTTPRequest{
+			PathParameters: map[string]string{"slug": "astro-static"},
+			Body:           `{"event_type":"signup"}`,
+		},
+		"topic-arn",
+		&fakeSNS{},
+		time.Time{},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400, result.StatusCode)
+	assert.JSONEq(t, `{"error":"unsupported event_type"}`, result.Body)
+}
+
+func TestRejectsInvalidJSONBody(t *testing.T) {
+	result, err := handleRequest(
+		context.Background(),
+		events.APIGatewayV2HTTPRequest{
+			PathParameters: map[string]string{"slug": "astro-static"},
+			Body:           `{`,
+		},
+		"topic-arn",
+		&fakeSNS{},
+		time.Time{},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400, result.StatusCode)
+	assert.JSONEq(t, `{"error":"invalid JSON body"}`, result.Body)
+}
+
 func TestRejectsMissingPathParameters(t *testing.T) {
 	result, err := handleRequest(
 		context.Background(),

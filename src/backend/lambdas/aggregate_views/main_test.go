@@ -23,8 +23,13 @@ func (f *fakeDynamoDB) UpdateItem(_ context.Context, input *dynamodb.UpdateItemI
 	return &dynamodb.UpdateItemOutput{}, f.err
 }
 
+func updatedAt(input *dynamodb.UpdateItemInput) string {
+	return input.ExpressionAttributeValues[":updated_at"].(*types.AttributeValueMemberS).Value
+}
+
 func TestUpdatesPostViewCounterFromRawSQSMessage(t *testing.T) {
 	client := &fakeDynamoDB{}
+	now := time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC)
 
 	result, err := handleRequest(
 		context.Background(),
@@ -34,7 +39,7 @@ func TestUpdatesPostViewCounterFromRawSQSMessage(t *testing.T) {
 		}}},
 		"post-views",
 		client,
-		time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+		now,
 	)
 
 	require.NoError(t, err)
@@ -42,6 +47,7 @@ func TestUpdatesPostViewCounterFromRawSQSMessage(t *testing.T) {
 	require.Len(t, client.updates, 1)
 	assert.Equal(t, "post-views", *client.updates[0].TableName)
 	assert.Equal(t, "jenkins-aws-oidc", client.updates[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+	assert.Equal(t, "2026-08-14T00:00:00Z", updatedAt(client.updates[0]))
 	assert.Contains(t, *client.updates[0].UpdateExpression, "ADD #view_count :one")
 }
 
@@ -52,17 +58,18 @@ func TestUnwrapsSNSMessageFromSQSBody(t *testing.T) {
 		context.Background(),
 		events.SQSEvent{Records: []events.SQSMessage{{
 			MessageId: "message-1",
-			Body:      `{"Message":"{\"post_slug\":\"astro-static\"}"}`,
+			Body:      `{"Message":"{\"post_slug\":\"astro-static\",\"received_at\":\"2026-08-17T12:30:00.000000123Z\"}"}`,
 		}}},
 		"post-views",
 		client,
-		time.Now(),
+		time.Date(2026, 8, 18, 0, 0, 0, 0, time.UTC),
 	)
 
 	require.NoError(t, err)
 	assert.Empty(t, result.BatchItemFailures)
 	require.Len(t, client.updates, 1)
 	assert.Equal(t, "astro-static", client.updates[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+	assert.Equal(t, "2026-08-17T12:30:00.000000123Z", updatedAt(client.updates[0]))
 }
 
 func TestReportsMalformedSNSMessageAsFailedRecord(t *testing.T) {
@@ -81,6 +88,25 @@ func TestReportsMalformedSNSMessageAsFailedRecord(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "bad-sns"}}, result.BatchItemFailures)
+	assert.Empty(t, client.updates)
+}
+
+func TestReportsInvalidReceivedAtAsFailedRecord(t *testing.T) {
+	client := &fakeDynamoDB{}
+
+	result, err := handleRequest(
+		context.Background(),
+		events.SQSEvent{Records: []events.SQSMessage{{
+			MessageId: "bad-time",
+			Body:      `{"post_slug":"valid-post","received_at":"not-a-time"}`,
+		}}},
+		"post-views",
+		client,
+		time.Now(),
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "bad-time"}}, result.BatchItemFailures)
 	assert.Empty(t, client.updates)
 }
 
