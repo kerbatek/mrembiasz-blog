@@ -26,12 +26,23 @@ log_file="sonar-${component}-scanner.log"
 check_text_file="sonar-${component}-dashboard-url.txt"
 rm -f "$log_file" "$check_text_file"
 
-sonar-scanner \
+set -- \
   -Dsonar.projectKey="mrembiasz-blog-${component}" \
   -Dsonar.projectName="$project_name" \
-  -Dsonar.projectVersion="${GIT_COMMIT:-local}" \
-  -Dsonar.sources="$sources" \
-  > "$log_file" 2>&1
+  -Dsonar.sources="$sources"
+
+if [ "${BRANCH_NAME:-main}" != 'main' ]; then
+  set -- "$@" -Dsonar.newCode.referenceBranch=main
+fi
+
+if [ "$component" = 'backend' ]; then
+  set -- "$@" \
+    -Dsonar.tests="$sources" \
+    -Dsonar.test.inclusions='**/*_test.go' \
+    -Dsonar.exclusions='**/*_test.go,dist/**,.astro/**,node_modules/**,terraform/.terraform/**,deploy/backend-lambdas/**'
+fi
+
+sonar-scanner "$@" > "$log_file" 2>&1
 scanner_status=$?
 
 cat "$log_file"

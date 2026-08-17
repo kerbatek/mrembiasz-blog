@@ -98,12 +98,16 @@ def checkedSonarScan(Map args) {
 }
 
 def checkedQualityGate(Map args) {
+  def dashboardUrlFile = "sonar-${args.component}-dashboard-url.txt"
+  if (!fileExists(dashboardUrlFile)) {
+    echo "${args.name}: skipped because scan failed."
+    return
+  }
+
   githubCheck(args.checkName) {
-    def dashboardUrlFile = "sonar-${args.component}-dashboard-url.txt"
-    if (!fileExists(dashboardUrlFile)) {
-      return "${args.name}: skipped because scan failed."
+    def qualityGate = timeout(time: 15, unit: 'MINUTES') {
+      waitForQualityGate abortPipeline: true
     }
-    def qualityGate = waitForQualityGate abortPipeline: true
     return [
       summary: "${args.name}: ${qualityGate.status}",
       text: readFile(dashboardUrlFile).trim()

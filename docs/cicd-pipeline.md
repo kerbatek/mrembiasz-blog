@@ -78,6 +78,9 @@ permission to create projects during analysis.
 Jenkins must have a SonarQube server named `SonarQube` configured in the
 SonarQube Scanner plugin, and the SonarQube projects must send webhooks to
 Jenkins so `waitForQualityGate` can resume the build.
+PR builds run the checked-out scanner script with the SonarQube token injected.
+That is an accepted risk for this project because the token is limited to
+SonarQube analysis and is not treated like an AWS deploy credential.
 If one SonarQube area fails, Jenkins still runs the remaining SonarQube scans
 so GitHub shows which areas passed and failed. Terraform plan and release only
 run when all quality gates pass.
@@ -89,6 +92,10 @@ Issues                       is greater than       0
 Security Hotspots Reviewed   is less than          100%
 Duplicated Lines (%)         is greater than       3.0%
 ```
+
+The scan does not set `sonar.projectVersion`; non-`main` branch analyses use
+`main` as `sonar.newCode.referenceBranch` instead of advancing the baseline on
+every commit.
 
 Coverage is intentionally not part of the gate yet because CI does not publish
 frontend or backend coverage reports to SonarQube.
