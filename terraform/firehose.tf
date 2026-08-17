@@ -22,7 +22,32 @@ resource "aws_glue_catalog_table" "raw_analytics_events" {
     }
 
     columns {
+      name = "event_type"
+      type = "string"
+    }
+
+    columns {
       name = "post_slug"
+      type = "string"
+    }
+
+    columns {
+      name = "received_at"
+      type = "string"
+    }
+
+    columns {
+      name = "client_ip"
+      type = "string"
+    }
+
+    columns {
+      name = "user_agent"
+      type = "string"
+    }
+
+    columns {
+      name = "referer"
       type = "string"
     }
   }

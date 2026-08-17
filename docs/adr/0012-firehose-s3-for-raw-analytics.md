@@ -23,10 +23,18 @@ validator Lambda
   -> Athena queries
 ```
 
-The current validated analytics event is intentionally small:
+The current validated analytics event is intentionally small but enriched by the
+validator before fanout:
 
 ```json
-{"post_slug": "example-post"}
+{
+  "event_type": "post_view",
+  "post_slug": "example-post",
+  "received_at": "2026-08-17T12:30:00Z",
+  "client_ip": "203.0.113.10",
+  "user_agent": "Mozilla/5.0",
+  "referer": "https://blog.mrembiasz.pl/"
+}
 ```
 
 ## Decision
@@ -37,10 +45,15 @@ Firehose will write accepted analytics events to a dedicated S3 bucket. It will
 use AWS Glue table metadata for the event schema and convert incoming JSON
 records to Parquet before delivery.
 
-The first Glue table has one field:
+The first Glue table has these fields:
 
 ```text
+event_type string
 post_slug string
+received_at string
+client_ip string
+user_agent string
+referer string
 ```
 
 S3 objects will be partitioned by delivery date under `raw/year=.../month=.../day=.../`.
