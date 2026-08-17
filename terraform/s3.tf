@@ -8,6 +8,11 @@ resource "aws_s3_bucket" "cloudfront_logs" {
   tags   = local.tags
 }
 
+resource "aws_s3_bucket" "raw_analytics" {
+  bucket = "mrembiasz-blog-raw-analytics"
+  tags   = local.tags
+}
+
 resource "aws_s3_bucket_public_access_block" "site" {
   bucket = aws_s3_bucket.site.id
 
@@ -29,6 +34,15 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "site" {
 
 resource "aws_s3_bucket_public_access_block" "cloudfront_logs" {
   bucket = aws_s3_bucket.cloudfront_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_public_access_block" "raw_analytics" {
+  bucket = aws_s3_bucket.raw_analytics.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -90,6 +104,16 @@ resource "aws_s3_bucket_versioning" "site" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudfront_logs" {
   bucket = aws_s3_bucket.cloudfront_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "raw_analytics" {
+  bucket = aws_s3_bucket.raw_analytics.id
 
   rule {
     apply_server_side_encryption_by_default {

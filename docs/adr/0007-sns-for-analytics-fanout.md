@@ -37,12 +37,13 @@ Use an SNS standard topic as the fanout point for validated analytics events.
 The validator Lambda will publish accepted events to the SNS topic. Downstream
 analytics consumers will subscribe to the topic. The aggregate post view
 consumer will use SQS for buffering before its worker Lambda. Firehose will
-subscribe directly for detailed event delivery to S3.
+subscribe directly for detailed event delivery to S3, converting raw JSON
+events to Parquet with a Glue schema before writing them.
 
 The first subscribers will support:
 
 1. DynamoDB aggregate post view updates.
-2. Detailed analytics event delivery to S3 through Firehose.
+2. Detailed analytics event delivery to S3 as Parquet through Firehose.
 
 ## Rationale
 
