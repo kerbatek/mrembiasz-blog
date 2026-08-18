@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ func (f *fakeSNS) Publish(_ context.Context, input *sns.PublishInput, _ ...func(
 }
 
 func TestPublishesValidPostViewEvent(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["astro-static"]`)
 	client := &fakeSNS{}
 	now := time.Date(2026, 8, 17, 12, 30, 0, 123, time.UTC)
 
@@ -66,6 +68,7 @@ func TestPublishesValidPostViewEvent(t *testing.T) {
 }
 
 func TestPublishesNestedPostSlug(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["notes/astro-static"]`)
 	client := &fakeSNS{}
 
 	result, err := handleRequest(
@@ -88,6 +91,7 @@ func TestPublishesNestedPostSlug(t *testing.T) {
 }
 
 func TestRejectsUnsupportedEventType(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["astro-static"]`)
 	result, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{
@@ -105,6 +109,7 @@ func TestRejectsUnsupportedEventType(t *testing.T) {
 }
 
 func TestRejectsInvalidJSONBody(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["astro-static"]`)
 	result, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{
@@ -122,6 +127,7 @@ func TestRejectsInvalidJSONBody(t *testing.T) {
 }
 
 func TestRejectsMissingPathParameters(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `[]`)
 	result, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{},
@@ -136,6 +142,7 @@ func TestRejectsMissingPathParameters(t *testing.T) {
 }
 
 func TestRejectsMissingPostSlug(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `[]`)
 	result, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{
@@ -151,6 +158,7 @@ func TestRejectsMissingPostSlug(t *testing.T) {
 }
 
 func TestPublishFailureBubblesToAPIGatewayRetryOr500(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["astro-static"]`)
 	_, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{
@@ -162,6 +170,29 @@ func TestPublishFailureBubblesToAPIGatewayRetryOr500(t *testing.T) {
 	)
 
 	require.EqualError(t, err, "sns unavailable")
+}
+
+func TestRejectsInvalidAndUnknownSlugs(t *testing.T) {
+	t.Setenv("VALID_POST_SLUGS", `["known-post"]`)
+
+	for _, slug := range []string{"UPPERCASE", "../known-post", strings.Repeat("a", maxPostSlugLength+1), "unknown-post"} {
+		result, err := handleRequest(context.Background(), events.APIGatewayV2HTTPRequest{
+			PathParameters: map[string]string{"slug": slug},
+		}, "topic-arn", &fakeSNS{}, time.Time{})
+		require.NoError(t, err)
+		assert.Equal(t, 400, result.StatusCode)
+	}
+}
+
+func TestRequiresCloudFrontSecretAndSiteOrigin(t *testing.T) {
+	request := events.APIGatewayV2HTTPRequest{Headers: map[string]string{
+		"X-Origin-Verify": "secret",
+		"Origin":          "https://blog.mrembiasz.pl",
+	}}
+
+	assert.True(t, authorized(request, "secret", "https://blog.mrembiasz.pl"))
+	assert.False(t, authorized(request, "wrong", "https://blog.mrembiasz.pl"))
+	assert.False(t, authorized(request, "secret", "https://other.example"))
 }
 
 func TestReusesSNSClientAcrossWarmInvocations(t *testing.T) {

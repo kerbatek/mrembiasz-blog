@@ -91,6 +91,11 @@ resource "aws_cloudfront_distribution" "site" {
     domain_name = replace(aws_apigatewayv2_api.analytics.api_endpoint, "https://", "")
     origin_id   = local.api_origin_id
 
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = random_password.analytics_origin.result
+    }
+
     custom_origin_config {
       http_port              = 80
       https_port             = 443

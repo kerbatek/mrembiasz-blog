@@ -1,24 +1,43 @@
 locals {
+  # ponytail: Lambda environment variables have a 4 KB ceiling; move this allowlist to DynamoDB if the blog outgrows it.
+  valid_post_slugs = sort([
+    for file in setunion(
+      fileset("${path.module}/../src/frontend/content/blog", "**/*.md"),
+      fileset("${path.module}/../src/frontend/content/blog", "**/*.mdx"),
+    ) : trimsuffix(trimsuffix(file, ".mdx"), ".md")
+  ])
+
   backend_lambdas = {
     aggregate_views = {
       role_arn = aws_iam_role.aggregate_views_lambda.arn
       environment = {
         POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
       }
+      reserved_concurrency = 5
     }
     analytics_validator = {
       role_arn = aws_iam_role.analytics_validator_lambda.arn
       environment = {
-        ANALYTICS_TOPIC_ARN = aws_sns_topic.analytics_events.arn
+        ANALYTICS_ALLOWED_ORIGIN = "https://${local.domain_name}"
+        ANALYTICS_ORIGIN_SECRET  = random_password.analytics_origin.result
+        ANALYTICS_TOPIC_ARN      = aws_sns_topic.analytics_events.arn
+        VALID_POST_SLUGS         = jsonencode(local.valid_post_slugs)
       }
+      reserved_concurrency = 5
     }
     get_views = {
       role_arn = aws_iam_role.get_views_lambda.arn
       environment = {
         POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
       }
+      reserved_concurrency = 5
     }
   }
+}
+
+resource "random_password" "analytics_origin" {
+  length  = 32
+  special = false
 }
 
 data "archive_file" "backend_lambda" {
@@ -32,16 +51,17 @@ data "archive_file" "backend_lambda" {
 resource "aws_lambda_function" "backend_lambda" {
   for_each = local.backend_lambdas
 
-  function_name    = "mrembiasz-blog-${replace(each.key, "_", "-")}"
-  role             = each.value.role_arn
-  handler          = "bootstrap"
-  runtime          = "provided.al2023"
-  filename         = data.archive_file.backend_lambda[each.key].output_path
-  source_code_hash = data.archive_file.backend_lambda[each.key].output_base64sha256
-  architectures    = ["arm64"]
-  memory_size      = 512
-  timeout          = 10
-  tags             = local.tags
+  function_name                  = "mrembiasz-blog-${replace(each.key, "_", "-")}"
+  role                           = each.value.role_arn
+  handler                        = "bootstrap"
+  runtime                        = "provided.al2023"
+  filename                       = data.archive_file.backend_lambda[each.key].output_path
+  source_code_hash               = data.archive_file.backend_lambda[each.key].output_base64sha256
+  architectures                  = ["arm64"]
+  memory_size                    = 512
+  timeout                        = 10
+  reserved_concurrent_executions = each.value.reserved_concurrency
+  tags                           = local.tags
 
   environment {
     variables = each.value.environment
