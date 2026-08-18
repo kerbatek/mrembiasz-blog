@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,16 +73,35 @@ func updateViewCount(ctx context.Context, client dynamoUpdater, tableName string
 		Key: map[string]types.AttributeValue{
 			"post_slug": &types.AttributeValueMemberS{Value: postSlug},
 		},
-		UpdateExpression: aws.String("SET #updated_at = :updated_at ADD #view_count :one"),
+		UpdateExpression:    aws.String("SET #updated_at = :updated_at, #updated_at_epoch = :updated_at_epoch ADD #view_count :one"),
+		ConditionExpression: aws.String("attribute_not_exists(#updated_at_epoch) OR #updated_at_epoch < :updated_at_epoch"),
 		ExpressionAttributeNames: map[string]string{
-			"#updated_at": "updated_at",
-			"#view_count": "view_count",
+			"#updated_at":       "updated_at",
+			"#updated_at_epoch": "updated_at_epoch",
+			"#view_count":       "view_count",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":updated_at": &types.AttributeValueMemberS{Value: now.UTC().Format(time.RFC3339Nano)},
-			":one":        &types.AttributeValueMemberN{Value: "1"},
+			":updated_at":       &types.AttributeValueMemberS{Value: now.UTC().Format(time.RFC3339Nano)},
+			":updated_at_epoch": &types.AttributeValueMemberN{Value: strconv.FormatInt(now.UnixNano(), 10)},
+			":one":              &types.AttributeValueMemberN{Value: "1"},
 		},
 	})
+	var staleEvent *types.ConditionalCheckFailedException
+	if errors.As(err, &staleEvent) {
+		_, err = client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+			TableName: aws.String(tableName),
+			Key: map[string]types.AttributeValue{
+				"post_slug": &types.AttributeValueMemberS{Value: postSlug},
+			},
+			UpdateExpression: aws.String("ADD #view_count :one"),
+			ExpressionAttributeNames: map[string]string{
+				"#view_count": "view_count",
+			},
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":one": &types.AttributeValueMemberN{Value: "1"},
+			},
+		})
+	}
 	return err
 }
 

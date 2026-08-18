@@ -16,10 +16,14 @@ import (
 type fakeDynamoDB struct {
 	updates []*dynamodb.UpdateItemInput
 	err     error
+	errs    []error
 }
 
 func (f *fakeDynamoDB) UpdateItem(_ context.Context, input *dynamodb.UpdateItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
 	f.updates = append(f.updates, input)
+	if len(f.errs) >= len(f.updates) {
+		return &dynamodb.UpdateItemOutput{}, f.errs[len(f.updates)-1]
+	}
 	return &dynamodb.UpdateItemOutput{}, f.err
 }
 
@@ -70,6 +74,27 @@ func TestUnwrapsSNSMessageFromSQSBody(t *testing.T) {
 	require.Len(t, client.updates, 1)
 	assert.Equal(t, "astro-static", client.updates[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
 	assert.Equal(t, "2026-08-17T12:30:00.000000123Z", updatedAt(client.updates[0]))
+}
+
+func TestOlderEventIncrementsWithoutReplacingUpdatedAt(t *testing.T) {
+	client := &fakeDynamoDB{errs: []error{&types.ConditionalCheckFailedException{}, nil}}
+
+	result, err := handleRequest(
+		context.Background(),
+		events.SQSEvent{Records: []events.SQSMessage{{
+			MessageId: "older-event",
+			Body:      `{"post_slug":"astro-static","received_at":"2026-08-17T12:30:00Z"}`,
+		}}},
+		"post-views",
+		client,
+		time.Now(),
+	)
+
+	require.NoError(t, err)
+	assert.Empty(t, result.BatchItemFailures)
+	require.Len(t, client.updates, 2)
+	assert.Contains(t, *client.updates[0].ConditionExpression, "#updated_at_epoch < :updated_at_epoch")
+	assert.Equal(t, "ADD #view_count :one", *client.updates[1].UpdateExpression)
 }
 
 func TestReportsMalformedSNSMessageAsFailedRecord(t *testing.T) {

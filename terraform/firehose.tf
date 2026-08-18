@@ -8,8 +8,34 @@ resource "aws_glue_catalog_table" "raw_analytics_events" {
   table_type    = "EXTERNAL_TABLE"
 
   parameters = {
-    EXTERNAL       = "TRUE"
-    classification = "parquet"
+    EXTERNAL                    = "TRUE"
+    classification              = "parquet"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2026,2100"
+    "projection.year.digits"    = "4"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.digits"     = "2"
+    "storage.location.template" = "s3://${aws_s3_bucket.raw_analytics.bucket}/raw/year=$${year}/month=$${month}/day=$${day}/"
+  }
+
+  partition_keys {
+    name = "year"
+    type = "int"
+  }
+
+  partition_keys {
+    name = "month"
+    type = "int"
+  }
+
+  partition_keys {
+    name = "day"
+    type = "int"
   }
 
   storage_descriptor {
