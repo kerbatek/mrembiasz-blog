@@ -20,8 +20,8 @@ CloudFront
 
 The first backend Lambda implementations used Python 3.12. After adding post
 view counters, the request-path validator remained intentionally small: parse
-the `{slug+}` route parameter, publish `{"post_slug": "..."}` to SNS, and return
-`202`.
+the `{slug+}` route parameter, enrich the post view event, publish it to SNS,
+and return `202`.
 
 Measured Lambda report rows from the Python implementation at 1024 MB memory and Go replacement
 showed the validator was a good fit for Go:

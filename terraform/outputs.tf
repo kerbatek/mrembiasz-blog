@@ -18,6 +18,11 @@ output "analytics_api_endpoint" {
   value       = aws_apigatewayv2_api.analytics.api_endpoint
 }
 
+output "raw_analytics_bucket_name" {
+  description = "S3 bucket that stores raw analytics events in Parquet format."
+  value       = aws_s3_bucket.raw_analytics.bucket
+}
+
 output "acm_validation_records" {
   description = "DNS CNAME records required to validate the ACM certificate."
   value = {

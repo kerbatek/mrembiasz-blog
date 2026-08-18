@@ -43,6 +43,10 @@ view_count
 updated_at
 ```
 
+`updated_at` is copied from the validated event's `received_at` timestamp when
+present, so DynamoDB aggregates and raw S3 analytics refer to the same accepted
+event time.
+
 The table will use on-demand capacity so the blog does not need capacity
 planning for a small and uneven analytics workload.
 

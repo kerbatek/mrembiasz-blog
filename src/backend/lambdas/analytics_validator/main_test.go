@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -24,14 +25,25 @@ func (f *fakeSNS) Publish(_ context.Context, input *sns.PublishInput, _ ...func(
 
 func TestPublishesValidPostViewEvent(t *testing.T) {
 	client := &fakeSNS{}
+	now := time.Date(2026, 8, 17, 12, 30, 0, 123, time.UTC)
 
 	result, err := handleRequest(
 		context.Background(),
 		events.APIGatewayV2HTTPRequest{
 			PathParameters: map[string]string{"slug": " astro-static "},
+			Headers: map[string]string{
+				"Referer": " https://blog.mrembiasz.pl/ ",
+			},
+			RequestContext: events.APIGatewayV2HTTPRequestContext{
+				HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+					SourceIP:  "203.0.113.10",
+					UserAgent: "Mozilla/5.0",
+				},
+			},
 		},
 		"topic-arn",
 		client,
+		now,
 	)
 	require.NoError(t, err)
 
@@ -41,9 +53,16 @@ func TestPublishesValidPostViewEvent(t *testing.T) {
 	require.Len(t, client.published, 1)
 	assert.Equal(t, "topic-arn", *client.published[0].TopicArn)
 
-	var message map[string]string
+	var message analyticsEvent
 	require.NoError(t, json.Unmarshal([]byte(*client.published[0].Message), &message))
-	assert.Equal(t, "astro-static", message["post_slug"])
+	assert.Equal(t, analyticsEvent{
+		EventType:  "post_view",
+		PostSlug:   "astro-static",
+		ReceivedAt: "2026-08-17T12:30:00.000000123Z",
+		ClientIP:   "203.0.113.10",
+		UserAgent:  "Mozilla/5.0",
+		Referer:    "https://blog.mrembiasz.pl/",
+	}, message)
 }
 
 func TestPublishesNestedPostSlug(t *testing.T) {
@@ -56,15 +75,50 @@ func TestPublishesNestedPostSlug(t *testing.T) {
 		},
 		"topic-arn",
 		client,
+		time.Time{},
 	)
 	require.NoError(t, err)
 
 	assert.Equal(t, 202, result.StatusCode)
 	require.Len(t, client.published, 1)
 
-	var message map[string]string
+	var message analyticsEvent
 	require.NoError(t, json.Unmarshal([]byte(*client.published[0].Message), &message))
-	assert.Equal(t, "notes/astro-static", message["post_slug"])
+	assert.Equal(t, "notes/astro-static", message.PostSlug)
+}
+
+func TestRejectsUnsupportedEventType(t *testing.T) {
+	result, err := handleRequest(
+		context.Background(),
+		events.APIGatewayV2HTTPRequest{
+			PathParameters: map[string]string{"slug": "astro-static"},
+			Body:           `{"event_type":"signup"}`,
+		},
+		"topic-arn",
+		&fakeSNS{},
+		time.Time{},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400, result.StatusCode)
+	assert.JSONEq(t, `{"error":"unsupported event_type"}`, result.Body)
+}
+
+func TestRejectsInvalidJSONBody(t *testing.T) {
+	result, err := handleRequest(
+		context.Background(),
+		events.APIGatewayV2HTTPRequest{
+			PathParameters: map[string]string{"slug": "astro-static"},
+			Body:           `{`,
+		},
+		"topic-arn",
+		&fakeSNS{},
+		time.Time{},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400, result.StatusCode)
+	assert.JSONEq(t, `{"error":"invalid JSON body"}`, result.Body)
 }
 
 func TestRejectsMissingPathParameters(t *testing.T) {
@@ -73,6 +127,7 @@ func TestRejectsMissingPathParameters(t *testing.T) {
 		events.APIGatewayV2HTTPRequest{},
 		"topic-arn",
 		&fakeSNS{},
+		time.Time{},
 	)
 	require.NoError(t, err)
 
@@ -88,6 +143,7 @@ func TestRejectsMissingPostSlug(t *testing.T) {
 		},
 		"topic-arn",
 		&fakeSNS{},
+		time.Time{},
 	)
 	require.NoError(t, err)
 
@@ -102,6 +158,7 @@ func TestPublishFailureBubblesToAPIGatewayRetryOr500(t *testing.T) {
 		},
 		"topic-arn",
 		&fakeSNS{err: errors.New("sns unavailable")},
+		time.Time{},
 	)
 
 	require.EqualError(t, err, "sns unavailable")

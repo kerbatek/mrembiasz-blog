@@ -61,6 +61,108 @@ data "aws_iam_policy_document" "lambda_assume_role" {
   }
 }
 
+data "aws_iam_policy_document" "firehose_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["firehose.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "sns_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["sns.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "raw_analytics_firehose" {
+  name               = "mrembiasz-blog-raw-analytics-firehose"
+  assume_role_policy = data.aws_iam_policy_document.firehose_assume_role.json
+  tags               = local.tags
+}
+
+data "aws_iam_policy_document" "raw_analytics_firehose" {
+  statement {
+    actions = [
+      "s3:GetBucketLocation",
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+    ]
+
+    resources = [aws_s3_bucket.raw_analytics.arn]
+  }
+
+  statement {
+    actions = [
+      "s3:AbortMultipartUpload",
+      "s3:GetObject",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject",
+    ]
+
+    resources = ["${aws_s3_bucket.raw_analytics.arn}/*"]
+  }
+
+  statement {
+    actions = [
+      "glue:GetTable",
+      "glue:GetTableVersion",
+      "glue:GetTableVersions",
+    ]
+
+    resources = [
+      "arn:aws:glue:eu-central-1:${data.aws_caller_identity.current.account_id}:catalog",
+      aws_glue_catalog_database.analytics.arn,
+      aws_glue_catalog_table.raw_analytics_events.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "raw_analytics_firehose" {
+  name   = "mrembiasz-blog-raw-analytics-firehose"
+  policy = data.aws_iam_policy_document.raw_analytics_firehose.json
+}
+
+resource "aws_iam_role_policy_attachment" "raw_analytics_firehose" {
+  role       = aws_iam_role.raw_analytics_firehose.name
+  policy_arn = aws_iam_policy.raw_analytics_firehose.arn
+}
+
+resource "aws_iam_role" "analytics_events_sns_firehose" {
+  name               = "mrembiasz-blog-analytics-events-sns-firehose"
+  assume_role_policy = data.aws_iam_policy_document.sns_assume_role.json
+  tags               = local.tags
+}
+
+data "aws_iam_policy_document" "analytics_events_sns_firehose" {
+  statement {
+    actions = [
+      "firehose:PutRecord",
+      "firehose:PutRecordBatch",
+    ]
+
+    resources = [aws_kinesis_firehose_delivery_stream.raw_analytics.arn]
+  }
+}
+
+resource "aws_iam_policy" "analytics_events_sns_firehose" {
+  name   = "mrembiasz-blog-analytics-events-sns-firehose"
+  policy = data.aws_iam_policy_document.analytics_events_sns_firehose.json
+}
+
+resource "aws_iam_role_policy_attachment" "analytics_events_sns_firehose" {
+  role       = aws_iam_role.analytics_events_sns_firehose.name
+  policy_arn = aws_iam_policy.analytics_events_sns_firehose.arn
+}
+
 resource "aws_iam_role" "aggregate_views_lambda" {
   name               = "mrembiasz-blog-aggregate-views-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
