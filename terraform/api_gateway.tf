@@ -44,6 +44,31 @@ resource "aws_apigatewayv2_stage" "analytics" {
   name        = "$default"
   auto_deploy = true
   tags        = local.tags
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.analytics_api.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+    })
+  }
+
+  route_settings {
+    route_key              = aws_apigatewayv2_route.post_view.route_key
+    throttling_burst_limit = 10
+    throttling_rate_limit  = 5
+  }
+}
+
+resource "aws_cloudwatch_log_group" "analytics_api" {
+  name              = "/aws/apigateway/mrembiasz-blog-analytics"
+  retention_in_days = 30
+  tags              = local.tags
 }
 
 resource "aws_lambda_permission" "analytics_api_gateway" {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -19,8 +21,13 @@ type snsPublisher interface {
 }
 
 var publisher snsPublisher
+var errInvalidPostConfiguration = errors.New("invalid valid-post configuration")
 
 const postViewEventType = "post_view"
+
+const maxPostSlugLength = 100
+
+var postSlugPattern = regexp.MustCompile(`^[a-z0-9]+([/-][a-z0-9]+)*$`)
 
 type analyticsEvent struct {
 	EventType  string `json:"event_type"`
@@ -51,8 +58,28 @@ func parsePostSlug(request events.APIGatewayV2HTTPRequest) (string, error) {
 	if postSlug == "" {
 		return "", errors.New("missing slug")
 	}
+	if len(postSlug) > maxPostSlugLength || !postSlugPattern.MatchString(postSlug) {
+		return "", errors.New("invalid slug")
+	}
 
-	return postSlug, nil
+	var validPostSlugs []string
+	if err := json.Unmarshal([]byte(os.Getenv("VALID_POST_SLUGS")), &validPostSlugs); err != nil {
+		return "", errInvalidPostConfiguration
+	}
+	for _, validPostSlug := range validPostSlugs {
+		if postSlug == validPostSlug {
+			return postSlug, nil
+		}
+	}
+
+	return "", errors.New("unknown slug")
+}
+
+func authorized(request events.APIGatewayV2HTTPRequest, originSecret, allowedOrigin string) bool {
+	providedSecret := header(request, "x-origin-verify")
+	return originSecret != "" && allowedOrigin != "" &&
+		subtle.ConstantTimeCompare([]byte(providedSecret), []byte(originSecret)) == 1 &&
+		header(request, "origin") == allowedOrigin
 }
 
 func parseEventType(request events.APIGatewayV2HTTPRequest) (string, error) {
@@ -99,6 +126,9 @@ func buildAnalyticsEvent(request events.APIGatewayV2HTTPRequest, eventType strin
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest, topicARN string, client snsPublisher, now time.Time) (events.APIGatewayV2HTTPResponse, error) {
 	postSlug, err := parsePostSlug(request)
 	if err != nil {
+		if errors.Is(err, errInvalidPostConfiguration) {
+			return events.APIGatewayV2HTTPResponse{}, err
+		}
 		return response(400, map[string]any{"error": err.Error()})
 	}
 
@@ -138,6 +168,10 @@ func getPublisher(ctx context.Context) (snsPublisher, error) {
 }
 
 func lambdaHandler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	if !authorized(request, os.Getenv("ANALYTICS_ORIGIN_SECRET"), os.Getenv("ANALYTICS_ALLOWED_ORIGIN")) {
+		return response(403, map[string]any{"error": "forbidden"})
+	}
+
 	client, err := getPublisher(ctx)
 	if err != nil {
 		return events.APIGatewayV2HTTPResponse{}, err

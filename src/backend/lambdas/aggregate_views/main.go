@@ -110,9 +110,12 @@ func handleRequest(ctx context.Context, event events.SQSEvent, tableName string,
 
 	for _, record := range event.Records {
 		postView, err := parseMessage(record, now)
-		if err == nil {
-			err = updateViewCount(ctx, client, tableName, postView.PostSlug, postView.ReceivedAt)
+		if err != nil {
+			log.Printf("dropping invalid message %s: %v", record.MessageId, err)
+			continue
 		}
+
+		err = updateViewCount(ctx, client, tableName, postView.PostSlug, postView.ReceivedAt)
 		if err == nil {
 			continue
 		}

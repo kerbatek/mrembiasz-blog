@@ -97,7 +97,7 @@ func TestOlderEventIncrementsWithoutReplacingUpdatedAt(t *testing.T) {
 	assert.Equal(t, "ADD #view_count :one", *client.updates[1].UpdateExpression)
 }
 
-func TestReportsMalformedSNSMessageAsFailedRecord(t *testing.T) {
+func TestDropsMalformedSNSMessage(t *testing.T) {
 	client := &fakeDynamoDB{}
 
 	result, err := handleRequest(
@@ -112,11 +112,11 @@ func TestReportsMalformedSNSMessageAsFailedRecord(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "bad-sns"}}, result.BatchItemFailures)
+	assert.Empty(t, result.BatchItemFailures)
 	assert.Empty(t, client.updates)
 }
 
-func TestReportsInvalidReceivedAtAsFailedRecord(t *testing.T) {
+func TestDropsInvalidReceivedAt(t *testing.T) {
 	client := &fakeDynamoDB{}
 
 	result, err := handleRequest(
@@ -131,11 +131,11 @@ func TestReportsInvalidReceivedAtAsFailedRecord(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "bad-time"}}, result.BatchItemFailures)
+	assert.Empty(t, result.BatchItemFailures)
 	assert.Empty(t, client.updates)
 }
 
-func TestReportsOnlyFailedRecords(t *testing.T) {
+func TestDropsInvalidAndProcessesValidRecords(t *testing.T) {
 	client := &fakeDynamoDB{}
 
 	result, err := handleRequest(
@@ -156,7 +156,7 @@ func TestReportsOnlyFailedRecords(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "bad"}}, result.BatchItemFailures)
+	assert.Empty(t, result.BatchItemFailures)
 	assert.Len(t, client.updates, 1)
 }
 
@@ -176,8 +176,8 @@ func TestReportsDynamoDBFailureAsFailedRecord(t *testing.T) {
 	assert.Equal(t, []events.SQSBatchItemFailure{{ItemIdentifier: "retry-me"}}, result.BatchItemFailures)
 }
 
-func TestReraisesFailedRecordWithoutMessageID(t *testing.T) {
-	_, err := handleRequest(
+func TestDropsInvalidRecordWithoutMessageID(t *testing.T) {
+	result, err := handleRequest(
 		context.Background(),
 		events.SQSEvent{Records: []events.SQSMessage{{
 			Body: `{"post_slug":""}`,
@@ -187,7 +187,8 @@ func TestReraisesFailedRecordWithoutMessageID(t *testing.T) {
 		time.Now(),
 	)
 
-	require.EqualError(t, err, "missing post_slug")
+	require.NoError(t, err)
+	assert.Empty(t, result.BatchItemFailures)
 }
 
 func TestReusesDynamoDBClientAcrossWarmInvocations(t *testing.T) {
