@@ -34,6 +34,25 @@ resource "aws_iam_policy" "jenkins_deploy" {
       {
         Effect = "Allow"
         Action = [
+          "logs:CreateLogGroup",
+          "logs:DeleteLogGroup",
+          "logs:DeleteRetentionPolicy",
+          "logs:ListTagsForResource",
+          "logs:PutRetentionPolicy",
+          "logs:TagResource",
+          "logs:UntagResource",
+        ]
+        Resource = "arn:aws:logs:eu-central-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/apigateway/mrembiasz-blog-analytics"
+      },
+      // This resource cannot be scoped to a specific log group, so we have to allow it for all log groups in the account.
+      {
+        Effect   = "Allow"
+        Action   = ["logs:DescribeLogGroups"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "lambda:GetFunctionConfiguration",
           "lambda:UpdateFunctionCode",
         ]
