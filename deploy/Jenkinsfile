@@ -207,7 +207,7 @@ pipeline {
     stage('Release') {
       agent {
         kubernetes {
-          defaultContainer 'node'
+          defaultContainer 'tools'
           yamlFile 'deploy/jenkins/release-pod.yaml'
         }
       }
