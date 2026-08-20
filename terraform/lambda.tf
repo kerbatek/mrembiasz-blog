@@ -71,20 +71,6 @@ resource "aws_lambda_function" "backend_lambda" {
   }
 }
 
-moved {
-  from = aws_lambda_function.aggregate_views
-  to   = aws_lambda_function.backend_lambda["aggregate_views"]
-}
-
-moved {
-  from = aws_lambda_function.analytics_validator
-  to   = aws_lambda_function.backend_lambda["analytics_validator"]
-}
-
-moved {
-  from = aws_lambda_function.get_views
-  to   = aws_lambda_function.backend_lambda["get_views"]
-}
 
 resource "aws_lambda_event_source_mapping" "aggregate_views" {
   event_source_arn        = aws_sqs_queue.aggregate_post_views.arn
