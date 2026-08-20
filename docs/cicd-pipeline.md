@@ -39,11 +39,13 @@ Backend stages run sequentially in the `go` container:
 
 ```text
 Download Backend Dependencies -> deploy/scripts/download-backend-dependencies.sh
+Scan Backend Vulnerabilities  -> deploy/scripts/scan-backend-vulnerabilities.sh
 Run Backend Tests             -> deploy/scripts/test-backend-lambdas.sh
 Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 ```
 
-`Run Backend Tests` runs each backend Lambda module in parallel internally.
+`Scan Backend Vulnerabilities` runs `govulncheck` across the Go module.
+`Run Backend Tests` runs each backend Lambda package in parallel internally.
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
 Terraform reads during plan and that the release Pod receives and deploys on
 `main`.

@@ -80,6 +80,16 @@ pipeline {
               }
             }
 
+            stage('Scan Backend Vulnerabilities') {
+              steps {
+                container('go') {
+                  script {
+                    pipelineHelpers.checkedSh(name: 'Scan Backend Vulnerabilities', checkName: 'Backend', exec: 'deploy/scripts/scan-backend-vulnerabilities.sh')
+                  }
+                }
+              }
+            }
+
             stage('Run Backend Tests') {
               steps {
                 container('go') {
