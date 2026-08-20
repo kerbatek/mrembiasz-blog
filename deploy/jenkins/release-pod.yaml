@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: node
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      command:
+        - cat
+      tty: true
+    - name: terraform
+      image: hashicorp/terraform:1.13@sha256:6bbb82d575aa7bd4f0a2c6e3a0838ab9590426c08a71d7a2783643f01004d356
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      command:
+        - cat
+      tty: true
+    - name: aws
+      image: amazon/aws-cli:2.28.21@sha256:aef1f233218008d23301c2480a1a9e731be8cadf5ecbeb142d4247eb7c279d1a
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      command:
+        - cat
+      tty: true

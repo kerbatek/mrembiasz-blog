@@ -1,125 +1,12 @@
 def PLAN_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-plan'
 def DEPLOY_ROLE = 'arn:aws:iam::047588357922:role/mrembiasz-blog-jenkins-deploy'
-def githubCheck(String name, Closure body) {
-  publishChecks(
-    name: name,
-    status: 'IN_PROGRESS',
-    summary: 'Running',
-    detailsURL: env.BUILD_URL
-  )
-
-  try {
-    def checkResult = body.call()
-    def checkTitle = null
-    def checkSummary = 'Passed'
-    def checkText = null
-
-    if (checkResult instanceof Map) {
-      checkTitle = checkResult.title ?: checkTitle
-      checkSummary = checkResult.summary ?: checkSummary
-      checkText = checkResult.text
-    } else if (checkResult) {
-      checkSummary = checkResult
-    }
-
-    def checkArgs = [
-      name: name,
-      status: 'COMPLETED',
-      conclusion: 'SUCCESS',
-      summary: checkSummary,
-      detailsURL: env.BUILD_URL
-    ]
-
-    if (checkTitle) {
-      checkArgs.title = checkTitle
-    }
-
-    if (checkText) {
-      checkArgs.text = checkText
-    }
-
-    publishChecks checkArgs
-  } catch (error) {
-    publishChecks(
-      name: name,
-      status: 'COMPLETED',
-      conclusion: 'FAILURE',
-      summary: 'Failed',
-      text: error.getMessage(),
-      detailsURL: env.BUILD_URL
-    )
-    throw error
-  }
-}
-
-def checkedSh(Map args) {
-  githubCheck(args.checkName ?: args.name) {
-    sh args.exec
-    def result = [
-      summary: args.name
-    ]
-    if (args.titleFile) {
-      result.title = readFile(args.titleFile).trim()
-    }
-    if (args.textFile) {
-      result.text = readFile(args.textFile).trim()
-    }
-    return result
-  }
-}
-
-def withAwsRole(String containerName, String roleArn, Closure body) {
-  container(containerName) {
-    withEnv(["AWS_ROLE_ARN=${roleArn}", 'AWS_DEFAULT_REGION=eu-central-1']) {
-      withCredentials([file(credentialsId: 'aws-oidc-token', variable: 'AWS_WEB_IDENTITY_TOKEN_FILE')]) {
-        body.call()
-      }
-    }
-  }
-}
-
-def checkedAwsSh(Map args) {
-  withAwsRole(args.container, args.role) {
-    checkedSh(name: args.name, checkName: args.checkName, exec: args.exec, titleFile: args.titleFile)
-  }
-}
-
-def checkedSonarScan(Map args) {
-  container('sonarqube') {
-    withSonarQubeEnv('SonarQube') {
-      checkedSh(
-        name: args.name,
-        checkName: args.checkName,
-        exec: "deploy/scripts/sonarqube-scan.sh ${args.component}",
-        textFile: "sonar-${args.component}-dashboard-url.txt"
-      )
-    }
-  }
-}
-
-def checkedQualityGate(Map args) {
-  def dashboardUrlFile = "sonar-${args.component}-dashboard-url.txt"
-  if (!fileExists(dashboardUrlFile)) {
-    echo "${args.name}: skipped because scan failed."
-    return
-  }
-
-  githubCheck(args.checkName) {
-    def qualityGate = timeout(time: 15, unit: 'MINUTES') {
-      waitForQualityGate abortPipeline: true
-    }
-    return [
-      summary: "${args.name}: ${qualityGate.status}",
-      text: readFile(dashboardUrlFile).trim()
-    ]
-  }
-}
+def pipelineHelpers
 
 pipeline {
   agent {
     kubernetes {
       defaultContainer 'node'
-      yamlFile 'deploy/jenkins/agent-pod.yaml'
+      yamlFile 'deploy/jenkins/plan-pod.yaml'
     }
   }
 
@@ -132,6 +19,14 @@ pipeline {
   }
 
   stages {
+    stage('Initialize') {
+      steps {
+        script {
+          pipelineHelpers = load 'deploy/jenkins/pipeline-helpers.groovy'
+        }
+      }
+    }
+
     stage('Validate') {
       parallel {
         stage('Frontend') {
@@ -139,7 +34,7 @@ pipeline {
             stage('Install Frontend Dependencies') {
               steps {
                 script {
-                  checkedSh(name: 'Install Frontend Dependencies', checkName: 'Frontend', exec: 'npm ci')
+                  pipelineHelpers.checkedSh(name: 'Install Frontend Dependencies', checkName: 'Frontend', exec: 'npm ci')
                 }
               }
             }
@@ -147,7 +42,7 @@ pipeline {
             stage('Scan Frontend Packages') {
               steps {
                 script {
-                  checkedSh(name: 'Scan Frontend Packages', checkName: 'Frontend', exec: 'npm run scan:frontend:packages')
+                  pipelineHelpers.checkedSh(name: 'Scan Frontend Packages', checkName: 'Frontend', exec: 'npm run scan:frontend:packages')
                 }
               }
             }
@@ -155,15 +50,18 @@ pipeline {
             stage('Lint Frontend') {
               steps {
                 script {
-                  checkedSh(name: 'Lint Frontend', checkName: 'Frontend', exec: 'npm run lint:frontend')
+                  pipelineHelpers.checkedSh(name: 'Lint Frontend', checkName: 'Frontend', exec: 'npm run lint:frontend')
                 }
               }
             }
 
             stage('Build Astro') {
+              environment {
+                PUBLIC_DEPLOY_ID = "${env.GIT_COMMIT ?: 'local'}"
+              }
               steps {
                 script {
-                  checkedSh(name: 'Build Astro', checkName: 'Frontend', exec: 'PUBLIC_DEPLOY_ID="${GIT_COMMIT:-local}" npm run build')
+                  pipelineHelpers.checkedSh(name: 'Build Astro', checkName: 'Frontend', exec: 'npm run build')
                 }
               }
             }
@@ -176,7 +74,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Download Backend Dependencies', checkName: 'Backend', exec: 'deploy/scripts/download-backend-dependencies.sh')
+                    pipelineHelpers.checkedSh(name: 'Download Backend Dependencies', checkName: 'Backend', exec: 'deploy/scripts/download-backend-dependencies.sh')
                   }
                 }
               }
@@ -186,7 +84,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Run Backend Tests', checkName: 'Backend', exec: 'deploy/scripts/test-backend-lambdas.sh')
+                    pipelineHelpers.checkedSh(name: 'Run Backend Tests', checkName: 'Backend', exec: 'deploy/scripts/test-backend-lambdas.sh')
                   }
                 }
               }
@@ -196,7 +94,7 @@ pipeline {
               steps {
                 container('go') {
                   script {
-                    checkedSh(name: 'Build Go Lambdas', checkName: 'Backend', exec: 'deploy/scripts/build-backend-lambdas.sh')
+                    pipelineHelpers.checkedSh(name: 'Build Go Lambdas', checkName: 'Backend', exec: 'deploy/scripts/build-backend-lambdas.sh')
                   }
                 }
               }
@@ -212,7 +110,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan(name: 'SonarQube Frontend Scan', checkName: 'Frontend', component: 'frontend')
+                pipelineHelpers.checkedSonarScan(name: 'SonarQube Frontend Scan', checkName: 'Frontend', component: 'frontend')
               }
             }
           }
@@ -222,7 +120,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate(name: 'SonarQube Frontend Quality Gate', checkName: 'Frontend', component: 'frontend')
+                pipelineHelpers.checkedQualityGate(name: 'SonarQube Frontend Quality Gate', checkName: 'Frontend', component: 'frontend')
               }
             }
           }
@@ -232,7 +130,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan(name: 'SonarQube Backend Scan', checkName: 'Backend', component: 'backend')
+                pipelineHelpers.checkedSonarScan(name: 'SonarQube Backend Scan', checkName: 'Backend', component: 'backend')
               }
             }
           }
@@ -242,7 +140,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate(name: 'SonarQube Backend Quality Gate', checkName: 'Backend', component: 'backend')
+                pipelineHelpers.checkedQualityGate(name: 'SonarQube Backend Quality Gate', checkName: 'Backend', component: 'backend')
               }
             }
           }
@@ -252,7 +150,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedSonarScan(name: 'SonarQube Terraform Scan', checkName: 'SonarQube Terraform', component: 'terraform')
+                pipelineHelpers.checkedSonarScan(name: 'SonarQube Terraform Scan', checkName: 'SonarQube Terraform', component: 'terraform')
               }
             }
           }
@@ -262,7 +160,7 @@ pipeline {
           steps {
             script {
               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                checkedQualityGate(name: 'SonarQube Terraform Quality Gate', checkName: 'SonarQube Terraform', component: 'terraform')
+                pipelineHelpers.checkedQualityGate(name: 'SonarQube Terraform Quality Gate', checkName: 'SonarQube Terraform', component: 'terraform')
               }
             }
           }
@@ -276,7 +174,7 @@ pipeline {
       }
       steps {
         script {
-          checkedAwsSh(
+          pipelineHelpers.checkedAwsSh(
             name: 'Terraform Plan',
             checkName: 'Terraform Plan',
             container: 'terraform',
@@ -288,24 +186,57 @@ pipeline {
       }
     }
 
-    stage('Release') {
+    stage('Package Release Artifacts') {
       when {
         allOf {
           branch 'main'
           expression { currentBuild.currentResult == 'SUCCESS' }
         }
       }
+      steps {
+        script {
+          env.RELEASE_ARTIFACT_SHA256 = sh(
+            script: 'deploy/scripts/package-release-artifacts.sh',
+            returnStdout: true
+          ).trim()
+        }
+        stash name: 'release-artifacts', includes: 'release-artifacts.tar.gz'
+      }
+    }
+
+    stage('Release') {
+      agent {
+        kubernetes {
+          defaultContainer 'node'
+          yamlFile 'deploy/jenkins/release-pod.yaml'
+        }
+      }
+      when {
+        beforeAgent true
+        allOf {
+          branch 'main'
+          expression { currentBuild.currentResult == 'SUCCESS' }
+        }
+      }
       stages {
+        stage('Verify Release Artifacts') {
+          steps {
+            deleteDir()
+            checkout scm
+            unstash 'release-artifacts'
+            sh 'deploy/scripts/restore-release-artifacts.sh'
+          }
+        }
+
         stage('Terraform Apply') {
           steps {
             script {
-              checkedAwsSh(
+              pipelineHelpers.checkedAwsSh(
                 name: 'Terraform Apply',
                 checkName: 'Release',
                 container: 'terraform',
                 role: DEPLOY_ROLE,
-                exec: 'deploy/scripts/terraform-apply.sh',
-                titleFile: 'terraform/tfplan-summary.txt'
+                exec: 'deploy/scripts/terraform-apply.sh'
               )
             }
           }
@@ -314,7 +245,7 @@ pipeline {
         stage('Deploy Backend Lambdas') {
           steps {
             script {
-              checkedAwsSh(
+              pipelineHelpers.checkedAwsSh(
                 name: 'Deploy Backend Lambdas',
                 checkName: 'Release',
                 container: 'aws',
@@ -328,7 +259,7 @@ pipeline {
         stage('Deploy Static Site') {
           steps {
             script {
-              checkedAwsSh(
+              pipelineHelpers.checkedAwsSh(
                 name: 'Deploy Static Site',
                 checkName: 'Release',
                 container: 'aws',
@@ -342,7 +273,7 @@ pipeline {
         stage('Smoke Test Website') {
           steps {
             script {
-              checkedSh(name: 'Smoke Test Website', checkName: 'Release', exec: 'deploy/scripts/smoke-test-site.sh')
+              pipelineHelpers.checkedSh(name: 'Smoke Test Website', checkName: 'Release', exec: 'deploy/scripts/smoke-test-site.sh')
             }
           }
         }

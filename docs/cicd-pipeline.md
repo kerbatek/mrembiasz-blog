@@ -1,18 +1,21 @@
 # CI/CD pipeline overview
 
 This repository uses one Jenkins multibranch pipeline at `deploy/Jenkinsfile`.
-The pipeline runs on ephemeral Kubernetes agent Pods defined in
-`deploy/jenkins/agent-pod.yaml`.
+Reusable Pipeline steps live in `deploy/jenkins/pipeline-helpers.groovy`.
+The pipeline runs on separate ephemeral Kubernetes Pods defined in
+`deploy/jenkins/plan-pod.yaml` and `deploy/jenkins/release-pod.yaml`.
 
 ## Pipeline flow
 
 ```text
 Git push or pull request
   -> Jenkins multibranch job
-  -> ephemeral Kubernetes agent Pod
+  -> ephemeral build and plan Pod
   -> frontend checks/build and Go backend validation in parallel
   -> SonarQube frontend, backend, and Terraform scans with quality gates
   -> Terraform plan
+  -> checksummed artifact handoff
+  -> ephemeral release Pod on main
   -> Terraform apply on main
   -> Lambda code deploy on main
   -> S3 sync on main
@@ -43,9 +46,12 @@ Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 `Run Backend Tests` runs each backend Lambda module in parallel internally.
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
 Terraform reads during plan and that the release stage deploys on `main`.
-The Jenkins agent Pod mounts the repo cache PVC at `/cache`. The node container
+The build and plan Pod mounts the repo cache PVC at `/cache`. The node container
 uses it for npm's cache, the Go container uses it for `GOMODCACHE` and
 `GOCACHE`, and the Terraform container uses it for provider plugins.
+The release Pod does not mount that cache. It verifies the stashed release
+archive's SHA-256 checksum, then extracts it into a clean checkout before
+assuming the deploy role.
 
 Each Jenkins stage publishes a GitHub check run with the stage name through the
 Jenkins Checks API and GitHub Checks plugins. The check links back to the
@@ -111,8 +117,9 @@ The plan script uses `terraform plan -lock=false` so the plan role can stay
 read-only for Terraform state and does not need state lock write permissions.
 The readable text plan (`tfplan.txt`) and plan summary (`tfplan-summary.txt`)
 are archived as Jenkins artifacts. The `Terraform Plan` GitHub check title is
-set from the plan result, for example `No Terraform changes.`. `Terraform
-Apply` reuses that same title on `main`.
+set from the plan result, for example `No Terraform changes.`. Only the binary
+plan is transferred to the release Pod; the two human-readable files stay on
+the plan Pod.
 
 `Terraform Apply` runs only on `main` and assumes:
 
