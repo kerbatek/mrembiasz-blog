@@ -69,8 +69,6 @@ resource "aws_cloudwatch_log_group" "analytics_api" {
   name              = "/aws/apigateway/mrembiasz-blog-analytics"
   retention_in_days = 30
   tags              = local.tags
-
-  depends_on = [aws_iam_role_policy_attachment.jenkins_deploy]
 }
 
 resource "aws_lambda_permission" "analytics_api_gateway" {

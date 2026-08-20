@@ -12,6 +12,5 @@ npm-debug.log*
 *.tfstate
 *.tfstate.*
 tfplan
-terraform/*.zip
 deploy/backend-lambdas/*.zip
 src/backend/lambdas/*/bootstrap

@@ -10,7 +10,7 @@ case "$component" in
     ;;
   backend)
     project_name='mrembiasz-blog backend'
-    sources='src/backend,tests/backend'
+    sources='src/backend'
     ;;
   terraform)
     project_name='mrembiasz-blog terraform'

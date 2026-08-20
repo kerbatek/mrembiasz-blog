@@ -37,14 +37,6 @@ resource "random_password" "analytics_origin" {
   special = false
 }
 
-data "archive_file" "backend_lambda" {
-  for_each = local.backend_lambdas
-
-  type        = "zip"
-  source_file = "${path.module}/../src/backend/lambdas/${each.key}/bootstrap"
-  output_path = "${path.module}/${each.key}_lambda.zip"
-}
-
 resource "aws_lambda_function" "backend_lambda" {
   for_each = local.backend_lambdas
 
@@ -52,8 +44,8 @@ resource "aws_lambda_function" "backend_lambda" {
   role             = each.value.role_arn
   handler          = "bootstrap"
   runtime          = "provided.al2023"
-  filename         = data.archive_file.backend_lambda[each.key].output_path
-  source_code_hash = data.archive_file.backend_lambda[each.key].output_base64sha256
+  filename         = "${path.module}/../deploy/backend-lambdas/${each.key}.zip"
+  source_code_hash = filebase64sha256("${path.module}/../deploy/backend-lambdas/${each.key}.zip")
   architectures    = ["arm64"]
   memory_size      = 512
   timeout          = 10
@@ -71,20 +63,6 @@ resource "aws_lambda_function" "backend_lambda" {
   }
 }
 
-moved {
-  from = aws_lambda_function.aggregate_views
-  to   = aws_lambda_function.backend_lambda["aggregate_views"]
-}
-
-moved {
-  from = aws_lambda_function.analytics_validator
-  to   = aws_lambda_function.backend_lambda["analytics_validator"]
-}
-
-moved {
-  from = aws_lambda_function.get_views
-  to   = aws_lambda_function.backend_lambda["get_views"]
-}
 
 resource "aws_lambda_event_source_mapping" "aggregate_views" {
   event_source_arn        = aws_sqs_queue.aggregate_post_views.arn

@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: node
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+      env:
+        - name: npm_config_cache
+          value: /cache/npm
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
+      command:
+        - cat
+      tty: true
+    - name: terraform
+      image: hashicorp/terraform:1.13@sha256:6bbb82d575aa7bd4f0a2c6e3a0838ab9590426c08a71d7a2783643f01004d356
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      env:
+        - name: TF_PLUGIN_CACHE_DIR
+          value: /cache/terraform/plugins
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
+      command:
+        - cat
+      tty: true
+    - name: go
+      image: kerbatek/mrembiasz-blog:go-1.25-zip@sha256:8545dc6947513b10d4bbe31240a13ccc419d73e1d76b6ac425f1726bd01ba9ef
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+      env:
+        - name: GOMODCACHE
+          value: /cache/go/pkg/mod
+        - name: GOCACHE
+          value: /cache/go/build
+      volumeMounts:
+        - name: repo-cache
+          mountPath: /cache
+      command:
+        - cat
+      tty: true
+    - name: sonarqube
+      image: sonarsource/sonar-scanner-cli:latest@sha256:23ca0f137965d9dff2198074043fd48d386280bc5d0ccac8c8349cea4cf096a9
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      command:
+        - cat
+      tty: true
+  volumes:
+    - name: repo-cache
+      persistentVolumeClaim:
+        claimName: mrembiasz-blog-cache
