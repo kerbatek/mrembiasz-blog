@@ -99,6 +99,6 @@ deploy/scripts/build-backend-lambdas.sh
 deploy/scripts/deploy-backend-lambdas.sh
 ```
 
-Terraform still needs a built `bootstrap` file when creating a Lambda for the
-first time, but after creation it ignores `filename` and `source_code_hash` so
-code-only changes do not create Terraform plan noise.
+Terraform uses the same built ZIP when creating a Lambda, but after creation it
+ignores `filename` and `source_code_hash` so code-only changes do not create
+Terraform plan noise.

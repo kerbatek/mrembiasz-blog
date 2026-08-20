@@ -45,7 +45,8 @@ Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 
 `Run Backend Tests` runs each backend Lambda module in parallel internally.
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
-Terraform reads during plan and that the release stage deploys on `main`.
+Terraform reads during plan and that the release Pod receives and deploys on
+`main`.
 The build and plan Pod mounts the repo cache PVC at `/cache`. The node container
 uses it for npm's cache, the Go container uses it for `GOMODCACHE` and
 `GOCACHE`, and the Terraform container uses it for provider plugins.
@@ -247,6 +248,7 @@ the website bucket, create CloudFront invalidations, or write IAM changes.
 - read/write access to the Terraform state object and `.tflock` object
 - AWS managed S3, CloudFront, and ACM permissions used to create and update
   this site's infrastructure
+- AWS managed full CloudWatch access, including CloudWatch Logs management
 - Lambda code update permissions for this app's backend functions
 - app IAM bootstrap permissions for the `mrembiasz-blog-deploy` policy and its
   attachment to the deploy role
