@@ -37,7 +37,9 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
           <h1 class="name">{post.data.title}</h1>
           <div class="article-meta">
             <time datetime={post.data.date}>{post.data.date}</time>
-            <span id="post-views" aria-live="polite">Views: ...</span>
+            <span id="post-views" data-post-slug={post.id} aria-live="polite"
+              >Views: ...</span
+            >
           </div>
         </header>
         <Content />
@@ -47,49 +49,6 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
         </nav>
       </article>
     </main>
-    <script is:inline define:vars={{ postSlug: post.id }}>
-      function recordPostView(slug) {
-        const storageKey = `post-viewed:${slug}`;
-
-        try {
-          if (localStorage.getItem(storageKey)) {
-            return;
-          }
-        } catch {
-          // Ignore storage failures; analytics should never affect reading.
-        }
-
-        fetch(`/api/views/${encodeURIComponent(slug)}`, {
-          method: "POST",
-          keepalive: true,
-        })
-          .then((response) => {
-            if (response.ok) {
-              try {
-                localStorage.setItem(storageKey, "1");
-              } catch {
-                // Ignore storage failures; analytics should never affect reading.
-              }
-            }
-          })
-          .catch(() => {});
-      }
-
-      function loadPostViews(slug) {
-        const viewElement = document.getElementById("post-views");
-
-        fetch(`/api/views/${encodeURIComponent(slug)}`)
-          .then((response) => (response.ok ? response.json() : null))
-          .then((data) => {
-            if (viewElement && Number.isInteger(data?.views)) {
-              viewElement.textContent = `Views: ${data.views}`;
-            }
-          })
-          .catch(() => {});
-      }
-
-      loadPostViews(postSlug);
-      recordPostView(postSlug);
-    </script>
+    <script src="../../scripts/post-views.js"></script>
   </body>
 </html>
