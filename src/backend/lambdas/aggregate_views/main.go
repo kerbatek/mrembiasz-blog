@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"mrembiasz-blog/backend/internal/appenv"
 )
 
 var dynamodbClient dynamoUpdater
@@ -33,7 +34,7 @@ func lambdaHandler(ctx context.Context, event events.SQSEvent) (events.SQSEventR
 		return events.SQSEventResponse{}, err
 	}
 
-	return handleRequest(ctx, event, os.Getenv("POST_VIEWS_TABLE_NAME"), client, time.Now())
+	return handleRequest(ctx, event, os.Getenv(appenv.PostViewsTableName), client, time.Now())
 }
 
 func main() {

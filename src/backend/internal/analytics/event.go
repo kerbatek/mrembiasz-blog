@@ -1,6 +1,10 @@
 package analytics
 
-const PostViewEventType = "post_view"
+const (
+	PostViewEventType  = "post_view"
+	PostSlugAttribute  = "post_slug"
+	ViewCountAttribute = "view_count"
+)
 
 type Event struct {
 	EventType  string `json:"event_type"`

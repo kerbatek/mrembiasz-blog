@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -14,48 +13,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"mrembiasz-blog/backend/internal/analytics"
+	"mrembiasz-blog/backend/internal/appenv"
 	"mrembiasz-blog/backend/internal/httpapi"
 )
-
-const maxPostSlugLength = 100
-
-var (
-	errInvalidPostConfiguration = errors.New("invalid valid-post configuration")
-	postSlugPattern             = regexp.MustCompile(`^[a-z0-9]+([/-][a-z0-9]+)*$`)
-)
-
-type analyticsEvent = analytics.Event
 
 type snsPublisher interface {
 	Publish(context.Context, *sns.PublishInput, ...func(*sns.Options)) (*sns.PublishOutput, error)
 }
 
-func parsePostSlug(request events.APIGatewayV2HTTPRequest) (string, error) {
-	postSlug, err := httpapi.PathParameter(request, "slug")
-	if err != nil {
-		return "", err
-	}
-	if len(postSlug) > maxPostSlugLength || !postSlugPattern.MatchString(postSlug) {
-		return "", errors.New("invalid slug")
-	}
-
-	var validPostSlugs []string
-	if err := json.Unmarshal([]byte(os.Getenv("VALID_POST_SLUGS")), &validPostSlugs); err != nil {
-		return "", errInvalidPostConfiguration
-	}
-	for _, validPostSlug := range validPostSlugs {
-		if postSlug == validPostSlug {
-			return postSlug, nil
-		}
-	}
-
-	return "", errors.New("unknown slug")
-}
-
 func authorized(request events.APIGatewayV2HTTPRequest, originSecret, allowedOrigin string) bool {
-	providedSecret := httpapi.Header(request, "x-origin-verify")
-	return originSecret != "" && allowedOrigin != "" &&
-		subtle.ConstantTimeCompare([]byte(providedSecret), []byte(originSecret)) == 1 &&
+	return httpapi.HasOriginSecret(request, originSecret) && allowedOrigin != "" &&
 		httpapi.Header(request, "origin") == allowedOrigin
 }
 
@@ -92,17 +59,17 @@ func buildAnalyticsEvent(request events.APIGatewayV2HTTPRequest, eventType, post
 }
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest, topicARN string, client snsPublisher, now time.Time) (events.APIGatewayV2HTTPResponse, error) {
-	postSlug, err := parsePostSlug(request)
+	postSlug, err := httpapi.AllowedPostSlug(request, os.Getenv(appenv.ValidPostSlugs))
 	if err != nil {
-		if errors.Is(err, errInvalidPostConfiguration) {
+		if errors.Is(err, httpapi.ErrInvalidPostConfiguration) {
 			return events.APIGatewayV2HTTPResponse{}, err
 		}
-		return httpapi.JSON(400, map[string]any{"error": err.Error()})
+		return httpapi.JSONError(http.StatusBadRequest, err.Error())
 	}
 
 	eventType, err := parseEventType(request)
 	if err != nil {
-		return httpapi.JSON(400, map[string]any{"error": err.Error()})
+		return httpapi.JSONError(http.StatusBadRequest, err.Error())
 	}
 
 	message, err := json.Marshal(buildAnalyticsEvent(request, eventType, postSlug, now))
@@ -118,5 +85,5 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest, 
 		return events.APIGatewayV2HTTPResponse{}, err
 	}
 
-	return httpapi.JSON(202, map[string]any{"accepted": true})
+	return httpapi.JSON(http.StatusAccepted, map[string]any{"accepted": true})
 }

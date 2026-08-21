@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -9,6 +10,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"mrembiasz-blog/backend/internal/appenv"
+)
+
+const (
+	testAllowedPostSlugs   = `["jenkins-aws-oidc","notes/astro-static","new-post","known-post"]`
+	testOriginSecret       = "secret"
+	testPostSlugAttribute  = "post_slug"
+	testTableName          = "post-views"
+	testViewCountAttribute = "view_count"
 )
 
 type fakeDynamoDB struct {
@@ -21,78 +31,74 @@ func (f *fakeDynamoDB) GetItem(_ context.Context, input *dynamodb.GetItemInput, 
 	return &dynamodb.GetItemOutput{Item: f.item}, nil
 }
 
+func viewRequest(slug string) events.APIGatewayV2HTTPRequest {
+	return events.APIGatewayV2HTTPRequest{PathParameters: map[string]string{"slug": slug}}
+}
+
 func TestReturnsPostViewCount(t *testing.T) {
-	client := &fakeDynamoDB{item: map[string]types.AttributeValue{
-		"view_count": &types.AttributeValueMemberN{Value: "42"},
-	}}
+	tests := []struct {
+		name        string
+		slug        string
+		wantSlug    string
+		storedValue string
+		wantBody    string
+	}{
+		{name: "trimmed slug", slug: " jenkins-aws-oidc ", wantSlug: "jenkins-aws-oidc", storedValue: "42", wantBody: `{"views":42}`},
+		{name: "nested slug", slug: "notes/astro-static", wantSlug: "notes/astro-static", storedValue: "7", wantBody: `{"views":7}`},
+		{name: "missing counter", slug: "new-post", wantSlug: "new-post", wantBody: `{"views":0}`},
+	}
 
-	result, err := handleRequest(
-		context.Background(),
-		events.APIGatewayV2HTTPRequest{
-			PathParameters: map[string]string{"slug": " jenkins-aws-oidc "},
-		},
-		"post-views",
-		client,
-	)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			item := map[string]types.AttributeValue{}
+			if test.storedValue != "" {
+				item[testViewCountAttribute] = &types.AttributeValueMemberN{Value: test.storedValue}
+			}
+			client := &fakeDynamoDB{item: item}
 
-	require.NoError(t, err)
-	assert.Equal(t, 200, result.StatusCode)
-	assert.JSONEq(t, `{"views":42}`, result.Body)
-	require.Len(t, client.gets, 1)
-	assert.Equal(t, "post-views", *client.gets[0].TableName)
-	assert.Equal(t, "jenkins-aws-oidc", client.gets[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+			result, err := handleRequest(context.Background(), viewRequest(test.slug), testTableName, testAllowedPostSlugs, client)
+
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, result.StatusCode)
+			assert.JSONEq(t, test.wantBody, result.Body)
+			require.Len(t, client.gets, 1)
+			assert.Equal(t, testTableName, *client.gets[0].TableName)
+			assert.Equal(t, test.wantSlug, client.gets[0].Key[testPostSlugAttribute].(*types.AttributeValueMemberS).Value)
+		})
+	}
 }
 
-func TestReturnsNestedPostViewCount(t *testing.T) {
-	client := &fakeDynamoDB{item: map[string]types.AttributeValue{
-		"view_count": &types.AttributeValueMemberN{Value: "7"},
-	}}
+func TestRejectsInvalidSlugBeforeDynamoDB(t *testing.T) {
+	for _, slug := range []string{"", "unknown-post"} {
+		client := &fakeDynamoDB{}
 
-	result, err := handleRequest(
-		context.Background(),
-		events.APIGatewayV2HTTPRequest{
-			PathParameters: map[string]string{"slug": "notes/astro-static"},
-		},
-		"post-views",
-		client,
-	)
+		result, err := handleRequest(context.Background(), viewRequest(slug), testTableName, testAllowedPostSlugs, client)
 
-	require.NoError(t, err)
-	assert.Equal(t, 200, result.StatusCode)
-	assert.JSONEq(t, `{"views":7}`, result.Body)
-	assert.Equal(t, "notes/astro-static", client.gets[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, result.StatusCode)
+		assert.Empty(t, client.gets)
+	}
 }
 
-func TestReturnsZeroForMissingCounter(t *testing.T) {
-	result, err := handleRequest(
-		context.Background(),
-		events.APIGatewayV2HTTPRequest{
-			PathParameters: map[string]string{"slug": "new-post"},
-		},
-		"post-views",
-		&fakeDynamoDB{},
-	)
-
-	require.NoError(t, err)
-	assert.Equal(t, 200, result.StatusCode)
-	assert.JSONEq(t, `{"views":0}`, result.Body)
-}
-
-func TestRejectsMissingPostSlug(t *testing.T) {
+func TestRequiresCloudFrontSecret(t *testing.T) {
 	client := &fakeDynamoDB{}
+	dynamodbClient = client
+	t.Cleanup(func() { dynamodbClient = nil })
+	t.Setenv(appenv.AnalyticsOriginSecret, testOriginSecret)
+	t.Setenv(appenv.PostViewsTableName, testTableName)
+	t.Setenv(appenv.ValidPostSlugs, testAllowedPostSlugs)
+	request := viewRequest("known-post")
 
-	result, err := handleRequest(
-		context.Background(),
-		events.APIGatewayV2HTTPRequest{
-			PathParameters: map[string]string{"slug": ""},
-		},
-		"post-views",
-		client,
-	)
-
+	result, err := lambdaHandler(context.Background(), request)
 	require.NoError(t, err)
-	assert.Equal(t, 400, result.StatusCode)
+	assert.Equal(t, http.StatusForbidden, result.StatusCode)
 	assert.Empty(t, client.gets)
+
+	request.Headers = map[string]string{"X-Origin-Verify": testOriginSecret}
+	result, err = lambdaHandler(context.Background(), request)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, result.StatusCode)
+	assert.Len(t, client.gets, 1)
 }
 
 func TestReusesDynamoDBClientAcrossWarmInvocations(t *testing.T) {

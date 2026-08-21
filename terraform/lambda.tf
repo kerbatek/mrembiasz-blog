@@ -26,7 +26,9 @@ locals {
     get_views = {
       role_arn = aws_iam_role.get_views_lambda.arn
       environment = {
-        POST_VIEWS_TABLE_NAME = aws_dynamodb_table.aggregate_post_views.name
+        ANALYTICS_ORIGIN_SECRET = random_password.analytics_origin.result
+        POST_VIEWS_TABLE_NAME   = aws_dynamodb_table.aggregate_post_views.name
+        VALID_POST_SLUGS        = jsonencode(local.valid_post_slugs)
       }
     }
   }
