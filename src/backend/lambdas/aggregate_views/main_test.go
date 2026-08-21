@@ -13,6 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	expectedIncrementExpression = "ADD #view_count :one"
+	expectedPostSlugAttribute   = "post_slug"
+	testTableName               = "post-views"
+)
+
 type fakeDynamoDB struct {
 	updates []*dynamodb.UpdateItemInput
 	err     error
@@ -31,17 +37,18 @@ func updatedAt(input *dynamodb.UpdateItemInput) string {
 	return input.ExpressionAttributeValues[":updated_at"].(*types.AttributeValueMemberS).Value
 }
 
+func sqsEvent(messageID, body string) events.SQSEvent {
+	return events.SQSEvent{Records: []events.SQSMessage{{MessageId: messageID, Body: body}}}
+}
+
 func TestUpdatesPostViewCounterFromRawSQSMessage(t *testing.T) {
 	client := &fakeDynamoDB{}
 	now := time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC)
 
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "message-1",
-			Body:      `{"post_slug":" jenkins-aws-oidc "}`,
-		}}},
-		"post-views",
+		sqsEvent("message-1", `{"post_slug":" jenkins-aws-oidc "}`),
+		testTableName,
 		client,
 		now,
 	)
@@ -49,10 +56,10 @@ func TestUpdatesPostViewCounterFromRawSQSMessage(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, result.BatchItemFailures)
 	require.Len(t, client.updates, 1)
-	assert.Equal(t, "post-views", *client.updates[0].TableName)
-	assert.Equal(t, "jenkins-aws-oidc", client.updates[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+	assert.Equal(t, testTableName, *client.updates[0].TableName)
+	assert.Equal(t, "jenkins-aws-oidc", client.updates[0].Key[expectedPostSlugAttribute].(*types.AttributeValueMemberS).Value)
 	assert.Equal(t, "2026-08-14T00:00:00Z", updatedAt(client.updates[0]))
-	assert.Contains(t, *client.updates[0].UpdateExpression, "ADD #view_count :one")
+	assert.Contains(t, *client.updates[0].UpdateExpression, expectedIncrementExpression)
 }
 
 func TestUnwrapsSNSMessageFromSQSBody(t *testing.T) {
@@ -60,11 +67,8 @@ func TestUnwrapsSNSMessageFromSQSBody(t *testing.T) {
 
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "message-1",
-			Body:      `{"Message":"{\"post_slug\":\"astro-static\",\"received_at\":\"2026-08-17T12:30:00.000000123Z\"}"}`,
-		}}},
-		"post-views",
+		sqsEvent("message-1", `{"Message":"{\"post_slug\":\"astro-static\",\"received_at\":\"2026-08-17T12:30:00.000000123Z\"}"}`),
+		testTableName,
 		client,
 		time.Date(2026, 8, 18, 0, 0, 0, 0, time.UTC),
 	)
@@ -72,7 +76,7 @@ func TestUnwrapsSNSMessageFromSQSBody(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, result.BatchItemFailures)
 	require.Len(t, client.updates, 1)
-	assert.Equal(t, "astro-static", client.updates[0].Key["post_slug"].(*types.AttributeValueMemberS).Value)
+	assert.Equal(t, "astro-static", client.updates[0].Key[expectedPostSlugAttribute].(*types.AttributeValueMemberS).Value)
 	assert.Equal(t, "2026-08-17T12:30:00.000000123Z", updatedAt(client.updates[0]))
 }
 
@@ -81,11 +85,8 @@ func TestOlderEventIncrementsWithoutReplacingUpdatedAt(t *testing.T) {
 
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "older-event",
-			Body:      `{"post_slug":"astro-static","received_at":"2026-08-17T12:30:00Z"}`,
-		}}},
-		"post-views",
+		sqsEvent("older-event", `{"post_slug":"astro-static","received_at":"2026-08-17T12:30:00Z"}`),
+		testTableName,
 		client,
 		time.Now(),
 	)
@@ -94,7 +95,7 @@ func TestOlderEventIncrementsWithoutReplacingUpdatedAt(t *testing.T) {
 	assert.Empty(t, result.BatchItemFailures)
 	require.Len(t, client.updates, 2)
 	assert.Contains(t, *client.updates[0].ConditionExpression, "#updated_at_epoch < :updated_at_epoch")
-	assert.Equal(t, "ADD #view_count :one", *client.updates[1].UpdateExpression)
+	assert.Equal(t, expectedIncrementExpression, *client.updates[1].UpdateExpression)
 }
 
 func TestDropsMalformedSNSMessage(t *testing.T) {
@@ -102,11 +103,8 @@ func TestDropsMalformedSNSMessage(t *testing.T) {
 
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "bad-sns",
-			Body:      `{"Message":"{"}`,
-		}}},
-		"post-views",
+		sqsEvent("bad-sns", `{"Message":"{"}`),
+		testTableName,
 		client,
 		time.Now(),
 	)
@@ -121,11 +119,8 @@ func TestDropsInvalidReceivedAt(t *testing.T) {
 
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "bad-time",
-			Body:      `{"post_slug":"valid-post","received_at":"not-a-time"}`,
-		}}},
-		"post-views",
+		sqsEvent("bad-time", `{"post_slug":"valid-post","received_at":"not-a-time"}`),
+		testTableName,
 		client,
 		time.Now(),
 	)
@@ -150,7 +145,7 @@ func TestDropsInvalidAndProcessesValidRecords(t *testing.T) {
 				Body:      `{"post_slug":""}`,
 			},
 		}},
-		"post-views",
+		testTableName,
 		client,
 		time.Now(),
 	)
@@ -163,11 +158,8 @@ func TestDropsInvalidAndProcessesValidRecords(t *testing.T) {
 func TestReportsDynamoDBFailureAsFailedRecord(t *testing.T) {
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			MessageId: "retry-me",
-			Body:      `{"post_slug":"valid-post"}`,
-		}}},
-		"post-views",
+		sqsEvent("retry-me", `{"post_slug":"valid-post"}`),
+		testTableName,
 		&fakeDynamoDB{err: errors.New("throttled")},
 		time.Now(),
 	)
@@ -179,10 +171,8 @@ func TestReportsDynamoDBFailureAsFailedRecord(t *testing.T) {
 func TestDropsInvalidRecordWithoutMessageID(t *testing.T) {
 	result, err := handleRequest(
 		context.Background(),
-		events.SQSEvent{Records: []events.SQSMessage{{
-			Body: `{"post_slug":""}`,
-		}}},
-		"post-views",
+		sqsEvent("", `{"post_slug":""}`),
+		testTableName,
 		&fakeDynamoDB{},
 		time.Now(),
 	)

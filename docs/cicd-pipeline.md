@@ -44,15 +44,16 @@ Run Backend Tests             -> deploy/scripts/test-backend-lambdas.sh
 Build Go Lambdas              -> deploy/scripts/build-backend-lambdas.sh
 ```
 
-`Scan Backend Vulnerabilities` runs `govulncheck` across the Go module.
+`Download Backend Dependencies` verifies the downloaded module cache with
+`go mod verify`. `Scan Backend Vulnerabilities` runs `govulncheck` across the
+Go module.
 `Run Backend Tests` runs each backend Lambda package in parallel internally.
 `Build Go Lambdas` creates the Lambda `bootstrap` binaries and zip files that
 Terraform reads during plan and that the release Pod receives and deploys on
 `main`.
-The build and plan Pod mounts the repo cache PVC at `/cache`. The node container
-uses it for npm's cache, the Go container uses it for `GOMODCACHE` and
-`GOCACHE`, and the Terraform container uses it for provider plugins.
-The release Pod does not mount that cache. It verifies the stashed release
+The build and plan Pod gives the node, Go, and Terraform containers separate
+`emptyDir` caches that exist only for that Pod. The release Pod does not mount
+those caches. It verifies the stashed release
 archive's SHA-256 checksum, then extracts it into a clean checkout before
 assuming the deploy role.
 

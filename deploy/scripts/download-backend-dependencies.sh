@@ -6,3 +6,4 @@ set -eu
 
 cd src/backend
 go mod download
+go mod verify

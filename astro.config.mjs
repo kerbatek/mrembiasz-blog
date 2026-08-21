@@ -52,4 +52,9 @@ export default defineConfig({
   },
   output: "static",
   srcDir: "./src/frontend",
+  vite: {
+    build: {
+      assetsInlineLimit: 0,
+    },
+  },
 });

@@ -58,10 +58,15 @@ resource "aws_apigatewayv2_stage" "analytics" {
     })
   }
 
-  route_settings {
-    route_key              = aws_apigatewayv2_route.post_view.route_key
+  default_route_settings {
     throttling_burst_limit = 10
     throttling_rate_limit  = 5
+  }
+
+  route_settings {
+    route_key              = aws_apigatewayv2_route.get_views.route_key
+    throttling_burst_limit = 20
+    throttling_rate_limit  = 10
   }
 }
 

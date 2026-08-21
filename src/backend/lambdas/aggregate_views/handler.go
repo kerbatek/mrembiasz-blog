@@ -16,6 +16,15 @@ import (
 	"mrembiasz-blog/backend/internal/analytics"
 )
 
+const (
+	decimalRadix                 = 10
+	incrementViewCountExpression = "ADD #view_count :one"
+	updateViewCountExpression    = "SET #updated_at = :updated_at, #updated_at_epoch = :updated_at_epoch " + incrementViewCountExpression
+	updatedAtAttribute           = "updated_at"
+	updatedAtEpochAttribute      = "updated_at_epoch"
+	viewCountIncrement           = "1"
+)
+
 type dynamoUpdater interface {
 	UpdateItem(context.Context, *dynamodb.UpdateItemInput, ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
 }
@@ -57,40 +66,35 @@ func parseMessage(record events.SQSMessage, fallbackReceivedAt time.Time) (postV
 	return postViewEvent{PostSlug: postSlug, ReceivedAt: receivedAt}, nil
 }
 
-func updateViewCount(ctx context.Context, client dynamoUpdater, tableName, postSlug string, now time.Time) error {
-	_, err := client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+func incrementViewCountInput(tableName, postSlug string) *dynamodb.UpdateItemInput {
+	return &dynamodb.UpdateItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]types.AttributeValue{
-			"post_slug": &types.AttributeValueMemberS{Value: postSlug},
+			analytics.PostSlugAttribute: &types.AttributeValueMemberS{Value: postSlug},
 		},
-		UpdateExpression:    aws.String("SET #updated_at = :updated_at, #updated_at_epoch = :updated_at_epoch ADD #view_count :one"),
-		ConditionExpression: aws.String("attribute_not_exists(#updated_at_epoch) OR #updated_at_epoch < :updated_at_epoch"),
+		UpdateExpression: aws.String(incrementViewCountExpression),
 		ExpressionAttributeNames: map[string]string{
-			"#updated_at":       "updated_at",
-			"#updated_at_epoch": "updated_at_epoch",
-			"#view_count":       "view_count",
+			"#view_count": analytics.ViewCountAttribute,
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":updated_at":       &types.AttributeValueMemberS{Value: now.UTC().Format(time.RFC3339Nano)},
-			":updated_at_epoch": &types.AttributeValueMemberN{Value: strconv.FormatInt(now.UnixNano(), 10)},
-			":one":              &types.AttributeValueMemberN{Value: "1"},
+			":one": &types.AttributeValueMemberN{Value: viewCountIncrement},
 		},
-	})
+	}
+}
+
+func updateViewCount(ctx context.Context, client dynamoUpdater, tableName, postSlug string, now time.Time) error {
+	input := incrementViewCountInput(tableName, postSlug)
+	input.UpdateExpression = aws.String(updateViewCountExpression)
+	input.ConditionExpression = aws.String("attribute_not_exists(#updated_at_epoch) OR #updated_at_epoch < :updated_at_epoch")
+	input.ExpressionAttributeNames["#updated_at"] = updatedAtAttribute
+	input.ExpressionAttributeNames["#updated_at_epoch"] = updatedAtEpochAttribute
+	input.ExpressionAttributeValues[":updated_at"] = &types.AttributeValueMemberS{Value: now.UTC().Format(time.RFC3339Nano)}
+	input.ExpressionAttributeValues[":updated_at_epoch"] = &types.AttributeValueMemberN{Value: strconv.FormatInt(now.UnixNano(), decimalRadix)}
+
+	_, err := client.UpdateItem(ctx, input)
 	var staleEvent *types.ConditionalCheckFailedException
 	if errors.As(err, &staleEvent) {
-		_, err = client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-			TableName: aws.String(tableName),
-			Key: map[string]types.AttributeValue{
-				"post_slug": &types.AttributeValueMemberS{Value: postSlug},
-			},
-			UpdateExpression: aws.String("ADD #view_count :one"),
-			ExpressionAttributeNames: map[string]string{
-				"#view_count": "view_count",
-			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":one": &types.AttributeValueMemberN{Value: "1"},
-			},
-		})
+		_, err = client.UpdateItem(ctx, incrementViewCountInput(tableName, postSlug))
 	}
 	return err
 }
