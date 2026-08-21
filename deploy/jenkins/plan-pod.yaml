@@ -15,8 +15,8 @@ spec:
         - name: npm_config_cache
           value: /cache/npm
       volumeMounts:
-        - name: repo-cache
-          mountPath: /cache
+        - name: npm-cache
+          mountPath: /cache/npm
       command:
         - cat
       tty: true
@@ -33,8 +33,8 @@ spec:
         - name: TF_PLUGIN_CACHE_DIR
           value: /cache/terraform/plugins
       volumeMounts:
-        - name: repo-cache
-          mountPath: /cache
+        - name: terraform-cache
+          mountPath: /cache/terraform
       command:
         - cat
       tty: true
@@ -53,8 +53,8 @@ spec:
         - name: GOCACHE
           value: /cache/go/build
       volumeMounts:
-        - name: repo-cache
-          mountPath: /cache
+        - name: go-cache
+          mountPath: /cache/go
       command:
         - cat
       tty: true
@@ -71,6 +71,9 @@ spec:
         - cat
       tty: true
   volumes:
-    - name: repo-cache
-      persistentVolumeClaim:
-        claimName: mrembiasz-blog-cache
+    - name: npm-cache
+      emptyDir: {}
+    - name: terraform-cache
+      emptyDir: {}
+    - name: go-cache
+      emptyDir: {}
