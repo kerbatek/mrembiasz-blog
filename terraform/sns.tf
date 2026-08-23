@@ -1,5 +1,5 @@
 resource "aws_sns_topic" "analytics_events" {
-  name = "mrembiasz-blog-analytics-events"
+  name = "${var.resource_prefix}-analytics-events"
   tags = local.tags
 }
 

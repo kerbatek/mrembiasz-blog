@@ -1,5 +1,5 @@
 resource "aws_glue_catalog_database" "analytics" {
-  name = "mrembiasz_blog_analytics"
+  name = "${replace(var.resource_prefix, "-", "_")}_analytics"
 }
 
 resource "aws_glue_catalog_table" "raw_analytics_events" {
@@ -80,7 +80,7 @@ resource "aws_glue_catalog_table" "raw_analytics_events" {
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "raw_analytics" {
-  name        = "mrembiasz-blog-raw-analytics"
+  name        = "${var.resource_prefix}-raw-analytics"
   destination = "extended_s3"
   tags        = local.tags
   depends_on  = [aws_iam_role_policy_attachment.raw_analytics_firehose]

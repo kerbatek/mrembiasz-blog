@@ -42,16 +42,15 @@ resource "random_password" "analytics_origin" {
 resource "aws_lambda_function" "backend_lambda" {
   for_each = local.backend_lambdas
 
-  function_name    = "mrembiasz-blog-${replace(each.key, "_", "-")}"
-  role             = each.value.role_arn
-  handler          = "bootstrap"
-  runtime          = "provided.al2023"
-  filename         = "${path.module}/../deploy/backend-lambdas/${each.key}.zip"
-  source_code_hash = filebase64sha256("${path.module}/../deploy/backend-lambdas/${each.key}.zip")
-  architectures    = ["arm64"]
-  memory_size      = 512
-  timeout          = 10
-  tags             = local.tags
+  function_name = "${var.resource_prefix}-${replace(each.key, "_", "-")}"
+  role          = each.value.role_arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  filename      = "${path.module}/../deploy/backend-lambdas/${each.key}.zip"
+  architectures = ["arm64"]
+  memory_size   = 512
+  timeout       = 10
+  tags          = local.tags
 
   environment {
     variables = each.value.environment
