@@ -42,7 +42,7 @@ resource "random_password" "analytics_origin" {
 resource "aws_lambda_function" "backend_lambda" {
   for_each = local.backend_lambdas
 
-  function_name    = "mrembiasz-blog-${replace(each.key, "_", "-")}"
+  function_name    = "${var.resource_prefix}-${replace(each.key, "_", "-")}"
   role             = each.value.role_arn
   handler          = "bootstrap"
   runtime          = "provided.al2023"

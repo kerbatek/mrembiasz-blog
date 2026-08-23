@@ -1,9 +1,9 @@
 data "aws_iam_role" "jenkins_deploy" {
-  name = "mrembiasz-blog-jenkins-deploy"
+  name = var.jenkins_deploy_role_name
 }
 
 resource "aws_iam_policy" "jenkins_deploy" {
-  name = "mrembiasz-blog-deploy"
+  name = "${var.resource_prefix}-deploy"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -84,7 +84,7 @@ data "aws_iam_policy_document" "sns_assume_role" {
 }
 
 resource "aws_iam_role" "raw_analytics_firehose" {
-  name               = "mrembiasz-blog-raw-analytics-firehose"
+  name               = "${var.resource_prefix}-raw-analytics-firehose"
   assume_role_policy = data.aws_iam_policy_document.firehose_assume_role.json
   tags               = local.tags
 }
@@ -127,7 +127,7 @@ data "aws_iam_policy_document" "raw_analytics_firehose" {
 }
 
 resource "aws_iam_policy" "raw_analytics_firehose" {
-  name   = "mrembiasz-blog-raw-analytics-firehose"
+  name   = "${var.resource_prefix}-raw-analytics-firehose"
   policy = data.aws_iam_policy_document.raw_analytics_firehose.json
 }
 
@@ -137,7 +137,7 @@ resource "aws_iam_role_policy_attachment" "raw_analytics_firehose" {
 }
 
 resource "aws_iam_role" "analytics_events_sns_firehose" {
-  name               = "mrembiasz-blog-analytics-events-sns-firehose"
+  name               = "${var.resource_prefix}-analytics-events-sns-firehose"
   assume_role_policy = data.aws_iam_policy_document.sns_assume_role.json
   tags               = local.tags
 }
@@ -154,7 +154,7 @@ data "aws_iam_policy_document" "analytics_events_sns_firehose" {
 }
 
 resource "aws_iam_policy" "analytics_events_sns_firehose" {
-  name   = "mrembiasz-blog-analytics-events-sns-firehose"
+  name   = "${var.resource_prefix}-analytics-events-sns-firehose"
   policy = data.aws_iam_policy_document.analytics_events_sns_firehose.json
 }
 
@@ -164,7 +164,7 @@ resource "aws_iam_role_policy_attachment" "analytics_events_sns_firehose" {
 }
 
 resource "aws_iam_role" "aggregate_views_lambda" {
-  name               = "mrembiasz-blog-aggregate-views-lambda"
+  name               = "${var.resource_prefix}-aggregate-views-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
@@ -188,7 +188,7 @@ data "aws_iam_policy_document" "aggregate_views_lambda" {
 }
 
 resource "aws_iam_policy" "aggregate_views_lambda" {
-  name   = "mrembiasz-blog-aggregate-views-lambda"
+  name   = "${var.resource_prefix}-aggregate-views-lambda"
   policy = data.aws_iam_policy_document.aggregate_views_lambda.json
 }
 
@@ -203,7 +203,7 @@ resource "aws_iam_role_policy_attachment" "aggregate_views_lambda_logs" {
 }
 
 resource "aws_iam_role" "analytics_validator_lambda" {
-  name               = "mrembiasz-blog-analytics-validator-lambda"
+  name               = "${var.resource_prefix}-analytics-validator-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
@@ -216,7 +216,7 @@ data "aws_iam_policy_document" "analytics_validator_lambda" {
 }
 
 resource "aws_iam_policy" "analytics_validator_lambda" {
-  name   = "mrembiasz-blog-analytics-validator-lambda"
+  name   = "${var.resource_prefix}-analytics-validator-lambda"
   policy = data.aws_iam_policy_document.analytics_validator_lambda.json
 }
 
@@ -231,7 +231,7 @@ resource "aws_iam_role_policy_attachment" "analytics_validator_lambda_logs" {
 }
 
 resource "aws_iam_role" "get_views_lambda" {
-  name               = "mrembiasz-blog-get-views-lambda"
+  name               = "${var.resource_prefix}-get-views-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   tags               = local.tags
 }
@@ -244,7 +244,7 @@ data "aws_iam_policy_document" "get_views_lambda" {
 }
 
 resource "aws_iam_policy" "get_views_lambda" {
-  name   = "mrembiasz-blog-get-views-lambda"
+  name   = "${var.resource_prefix}-get-views-lambda"
   policy = data.aws_iam_policy_document.get_views_lambda.json
 }
 

@@ -1,15 +1,15 @@
 resource "aws_s3_bucket" "site" {
-  bucket = "mrembiasz-blog"
+  bucket = var.resource_prefix
   tags   = local.tags
 }
 
 resource "aws_s3_bucket" "cloudfront_logs" {
-  bucket = "mrembiasz-blog-cloudfront-logs"
+  bucket = "${var.resource_prefix}-cloudfront-logs"
   tags   = local.tags
 }
 
 resource "aws_s3_bucket" "raw_analytics" {
-  bucket = "mrembiasz-blog-raw-analytics"
+  bucket = "${var.resource_prefix}-raw-analytics"
   tags   = local.tags
 }
 
@@ -139,7 +139,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudfront_logs" {
     filter {}
 
     expiration {
-      days = 90
+      days = var.cloudfront_log_retention_days
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "raw_analytics" {
+  count  = var.raw_analytics_retention_days == null ? 0 : 1
+  bucket = aws_s3_bucket.raw_analytics.id
+
+  rule {
+    id     = "expire-raw-analytics"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = var.raw_analytics_retention_days
     }
   }
 }

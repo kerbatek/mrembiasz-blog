@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "analytics" {
-  name          = "mrembiasz-blog-analytics"
+  name          = "${var.resource_prefix}-analytics"
   protocol_type = "HTTP"
   tags          = local.tags
 
@@ -71,8 +71,8 @@ resource "aws_apigatewayv2_stage" "analytics" {
 }
 
 resource "aws_cloudwatch_log_group" "analytics_api" {
-  name              = "/aws/apigateway/mrembiasz-blog-analytics"
-  retention_in_days = 30
+  name              = "/aws/apigateway/${var.resource_prefix}-analytics"
+  retention_in_days = var.api_log_retention_days
   tags              = local.tags
 }
 

@@ -1,10 +1,11 @@
 locals {
   caching_optimized_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-  domain_name                 = "blog.mrembiasz.pl"
-  api_origin_id               = "api-mrembiasz-blog"
-  s3_origin_id                = "s3-mrembiasz-blog"
+  domain_name                 = var.domain_name
+  api_origin_id               = "api-${var.resource_prefix}"
+  s3_origin_id                = "s3-${var.resource_prefix}"
   tags = {
-    Project = "mrembiasz-blog"
+    Project     = "mrembiasz-blog"
+    Environment = var.environment
   }
 }
 
@@ -49,7 +50,7 @@ resource "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_cache_policy" "post_views_api" {
-  name        = "mrembiasz-blog-post-views-api"
+  name        = "${var.resource_prefix}-post-views-api"
   default_ttl = 5
   max_ttl     = 5
   min_ttl     = 0
