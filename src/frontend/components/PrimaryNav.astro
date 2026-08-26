@@ -1,0 +1,20 @@
+---
+const navItems = [
+  { href: "https://mrembiasz.pl/", label: "Home" },
+  {
+    href: "https://mrembiasz.pl/certifications/",
+    label: "Certs & training",
+  },
+  { href: "/", label: "Blog", current: true },
+];
+---
+
+<nav class="nav" aria-label="Primary navigation">
+  {
+    navItems.map((item) => (
+      <a href={item.href} aria-current={item.current ? "page" : undefined}>
+        {item.label}
+      </a>
+    ))
+  }
+</nav>

@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import PrimaryNav from "../components/PrimaryNav.astro";
 import "../styles/global.css";
 import "../styles/index.css";
 
@@ -20,29 +21,41 @@ const posts = (await getCollection("blog")).sort((a, b) =>
       content="Production notes by Mateusz Rembiasz on AWS, infrastructure, CI/CD, and serverless systems."
     />
     <meta name="deploy-id" content={deployId} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Mateusz Rembiasz Blog</title>
   </head>
-  <body>
+  <body class="blog-index">
     <main class="container">
-      <h1 class="name">Mateusz Rembiasz Blog</h1>
-      <p class="bio">
-        Hi! :) Welcome to my blog! I write about AWS, infrastructure, CI/CD, and
-        serverless systems. You can also check my <a href="https://mrembiasz.pl"
-          >portfolio</a
-        > for more information about me.
-      </p>
+      <PrimaryNav />
+
+      <header class="editorial-hero">
+        <div>
+          <p class="status">Technical Blog</p>
+          <h1 class="name">Mateusz Rembiasz Blog</h1>
+        </div>
+        <p class="bio">
+          Hi :) Welcome to my blog! <br />
+          I write about AWS, infrastructure, CI/CD, and serverless systems. You can
+          also check my <a href="https://mrembiasz.pl">portfolio</a> for more information
+          about me.
+        </p>
+      </header>
 
       <section class="section" aria-labelledby="posts-title">
-        <p id="posts-title" class="section-label">Latest</p>
+        <div class="section-heading">
+          <p class="section-label">01 / Writing</p>
+          <h2 id="posts-title" class="section-title">Latest posts</h2>
+        </div>
         <div class="posts">
           {
             posts.map((post) => (
               <a class="post" href={`/posts/${post.id}/`}>
                 <div class="post-header">
-                  <h2>{post.data.title}</h2>
                   <time datetime={post.data.date}>{post.data.date}</time>
+                  <h3>{post.data.title}</h3>
                 </div>
                 <p>{post.data.summary}</p>
+                <span class="post-link">Read article →</span>
               </a>
             ))
           }

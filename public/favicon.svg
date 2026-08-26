@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#18181b" />
+  <text
+    x="32"
+    y="43"
+    fill="#e4e4e7"
+    font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    font-size="34"
+    font-weight="700"
+    text-anchor="middle"
+  >MR</text>
+</svg>

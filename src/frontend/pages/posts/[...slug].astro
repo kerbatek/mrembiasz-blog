@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
+import PrimaryNav from "../../components/PrimaryNav.astro";
 import "../../styles/global.css";
 import "../../styles/post.css";
 
@@ -24,10 +25,13 @@ const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={post.data.summary} />
     <meta name="deploy-id" content={deployId} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{post.data.title} | Mateusz Rembiasz Blog</title>
   </head>
-  <body>
+  <body class="post-page">
     <main class="container">
+      <PrimaryNav />
+
       <article class="article">
         <nav class="article-back article-back-top" aria-label="Post navigation">
           <a href="/">Back to blog</a>
