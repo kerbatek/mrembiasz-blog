@@ -1,12 +1,28 @@
-.container:has(.article) {
-  max-width: 64rem;
+.post-page .nav {
+  margin-bottom: 1rem;
+}
+
+.article {
+  max-width: 52rem;
+  margin: 0 auto 4rem;
 }
 
 .article-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 3rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2rem;
 }
 
-.article-meta,
+.article-header .name {
+  max-width: 16ch;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
 .article :where(p, li) {
   color: var(--muted);
 }
@@ -15,70 +31,73 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem 0.8rem;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
 }
 
-.article :where(h1, h2, h3) {
-  margin: 1.75rem 0 0.75rem;
+.article :where(h2, h3) {
+  margin: 2.5rem 0 1rem;
   color: var(--text);
-  font-weight: 500;
-  letter-spacing: 0;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.article :where(h2) {
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+}
+
+.article :where(h3) {
+  font-size: clamp(1.3rem, 3vw, 1.6rem);
 }
 
 .article :where(p, ul, ol) {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .article :where(p, li) {
-  font-size: 1rem;
-  font-weight: 300;
-  line-height: 1.7;
+  font-size: 1.03rem;
+  line-height: 1.8;
 }
 
 .article a {
-  color: var(--text);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
 
 .article a:hover {
-  color: var(--muted);
+  color: var(--accent-hover);
 }
 
 .article :where(ul, ol) {
-  padding-left: 1.25rem;
+  padding-left: 1.5rem;
 }
 
 .article :not(pre) > code {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.08rem 0.28rem;
-  background: #1f1f23;
+  background: var(--surface);
   color: var(--text);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.88em;
 }
 
 .article pre {
-  margin: 1rem 0 1.25rem;
+  margin: 1.25rem 0 1.5rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
-  line-height: 1.55;
+  border-radius: 0.75rem;
+  padding: 1rem 1.2rem;
+  line-height: 1.6;
   overflow-x: auto;
 }
 
 .article pre code {
   display: block;
   min-width: max-content;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.84rem;
 }
 
@@ -86,25 +105,23 @@
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 1rem auto 1.25rem;
+  margin: 1.25rem auto 1.5rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 0.75rem;
   padding: 1rem;
   background: #1f1f23;
 }
 
 .article-thanks {
-  margin-top: 2rem;
+  margin-top: 3rem;
   color: var(--muted);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.82rem;
 }
 
 .article-back {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--border);
 }
 
@@ -113,9 +130,7 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--muted);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.78rem;
   text-decoration: none;
 }
