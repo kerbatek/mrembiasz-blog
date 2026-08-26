@@ -32,7 +32,11 @@ export default defineConfig({
       excludeLangs: ["mermaid"],
     },
     shikiConfig: {
-      theme: "one-dark-pro",
+      themes: {
+        light: "one-light",
+        dark: "one-dark-pro",
+      },
+      defaultColor: "light-dark()",
     },
     processor: unified({
       rehypePlugins: [
@@ -41,10 +45,8 @@ export default defineConfig({
           rehypeMermaid,
           {
             strategy: "img-svg",
-            colorScheme: "dark",
-            mermaidConfig: {
-              theme: "dark",
-            },
+            colorScheme: "light",
+            dark: true,
           },
         ],
       ],

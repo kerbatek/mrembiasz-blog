@@ -109,6 +109,12 @@
   background: #1f1f23;
 }
 
+@media (prefers-color-scheme: light) {
+  .article img[id^="mermaid"] {
+    background: #fafafa;
+  }
+}
+
 .article-thanks {
   margin-top: 3rem;
   color: var(--muted);
