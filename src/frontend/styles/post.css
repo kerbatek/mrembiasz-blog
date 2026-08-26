@@ -25,6 +25,8 @@
 
 .article :where(p, li) {
   color: var(--muted);
+  font-size: 1.03rem;
+  line-height: 1.8;
 }
 
 .article-meta {
@@ -54,11 +56,6 @@
 
 .article :where(p, ul, ol) {
   margin-bottom: 1.25rem;
-}
-
-.article :where(p, li) {
-  font-size: 1.03rem;
-  line-height: 1.8;
 }
 
 .article a {
