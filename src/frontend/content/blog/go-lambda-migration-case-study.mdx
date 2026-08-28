@@ -25,6 +25,8 @@ In this blog app, that backend handles post view analytics. The write path
 accepts a view event, sends it through SNS and SQS, and updates a DynamoDB
 counter:
 
+<figure>
+
 ```mermaid
 graph TD
   cloudfront[CloudFront]
@@ -48,6 +50,14 @@ graph TD
 
   sns --> handoff --> sqs
 ```
+
+<figcaption>
+Architecture: CloudFront forwards the request to API Gateway, which invokes the
+validator Lambda. The validator publishes to SNS, SNS fans out to SQS, and the
+aggregate worker Lambda consumes the queue and updates DynamoDB.
+</figcaption>
+
+</figure>
 
 SNS currently has only one subscriber. Later, another SQS queue with a different
 Lambda will be added to save detailed events to S3 for analytics and reporting.

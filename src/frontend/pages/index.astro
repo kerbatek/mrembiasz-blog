@@ -15,12 +15,14 @@ const posts = (await getCollection("blog")).sort((a, b) =>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
       content="Production notes by Mateusz Rembiasz on AWS, infrastructure, CI/CD, and serverless systems."
     />
     <meta name="deploy-id" content={deployId} />
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Mateusz Rembiasz Blog</title>
   </head>

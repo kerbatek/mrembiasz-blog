@@ -102,11 +102,19 @@
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 1.25rem auto 1.5rem;
+  margin: 1.25rem auto 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 1rem;
   background: #1f1f23;
+}
+
+.article figcaption {
+  margin-bottom: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.6;
 }
 
 @media (prefers-color-scheme: light) {

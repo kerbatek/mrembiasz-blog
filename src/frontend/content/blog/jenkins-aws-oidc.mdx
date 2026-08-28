@@ -40,6 +40,8 @@ The credential stores the configuration for requesting a token; the token itself
 
 The flow is: Jenkins gets an OIDC token for the current job, AWS STS verifies that token against the role trust policy, and AWS returns temporary credentials that the build can use.
 
+<figure>
+
 ```mermaid
 graph LR
   A[Jenkins] -->|OIDC token| B[AWS STS]
@@ -47,6 +49,14 @@ graph LR
   B -->|Temporary credentials| A
   A -->|Use temporary credentials| D[AWS resources]
 ```
+
+<figcaption>
+Authentication flow: Jenkins sends its job-specific OIDC token to AWS STS. STS
+checks the token and IAM role trust policy, returns temporary credentials, and
+Jenkins uses those credentials to access AWS resources.
+</figcaption>
+
+</figure>
 
 ### How is it better than storing credentials in Jenkins?
 
@@ -71,6 +81,8 @@ The plan role trusts all Jenkins subjects for this repository's PR and branch jo
 
 The split looks like this: pull requests get enough access to produce a Terraform plan, while the protected `main` branch gets the permissions needed to apply infrastructure changes and publish the site.
 
+<figure>
+
 ```mermaid
 graph TD
   pr[Pull request or branch build]
@@ -83,6 +95,14 @@ graph TD
   pr --> plan --> readonly
   main --> deploy --> mutate
 ```
+
+<figcaption>
+Authorization split: pull request and branch builds assume the plan role and
+can only run `terraform plan`; the release build on `main` assumes the deploy
+role and can run `terraform apply` and publish the site.
+</figcaption>
+
+</figure>
 
 ## What Jenkins passes to AWS tools
 
