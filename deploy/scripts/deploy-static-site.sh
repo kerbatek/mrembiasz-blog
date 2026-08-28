@@ -7,14 +7,17 @@ distribution_id="$(cat terraform/cloudfront_distribution_id.txt)"
 aws s3 sync dist/ "s3://${bucket_name}" \
   --delete \
   --exclude "*.html" \
+  --exclude "*.xml" \
+  --exclude "robots.txt" \
   --cache-control "public, max-age=31536000, immutable"
 
 aws s3 sync dist/ "s3://${bucket_name}" \
   --delete \
   --exclude "*" \
   --include "*.html" \
-  --cache-control "public, max-age=60" \
-  --content-type "text/html; charset=utf-8"
+  --include "*.xml" \
+  --include "robots.txt" \
+  --cache-control "public, max-age=60"
 
 invalidation_id="$(
   aws cloudfront create-invalidation \

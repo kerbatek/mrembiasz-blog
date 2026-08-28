@@ -16,17 +16,35 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content } = await render(post);
 const deployId = import.meta.env.PUBLIC_DEPLOY_ID ?? "local";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
+const jsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  mainEntityOfPage: canonicalURL,
+  headline: post.data.title,
+  description: post.data.summary,
+  datePublished: post.data.date,
+  author: {
+    "@type": "Person",
+    name: "Mateusz Rembiasz",
+    url: "https://mrembiasz.pl/",
+  },
+}).replaceAll("<", "\\u003c");
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={post.data.summary} />
     <meta name="deploy-id" content={deployId} />
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{post.data.title} | Mateusz Rembiasz Blog</title>
+    <script type="application/ld+json" set:html={jsonLd} is:inline />
   </head>
   <body class="post-page">
     <main class="container">

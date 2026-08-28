@@ -22,6 +22,7 @@ function externalLinksInNewTabs() {
 }
 
 export default defineConfig({
+  site: "https://blog.mrembiasz.pl",
   build: {
     inlineStylesheets: "never",
   },
