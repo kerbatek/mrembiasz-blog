@@ -117,6 +117,27 @@
   line-height: 1.6;
 }
 
+.article .architecture-figure {
+  width: min(96vw, 98rem);
+  margin: 1.5rem 0;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.article .architecture-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.article .architecture-figure figcaption {
+  max-width: 52rem;
+  margin: 0.75rem auto 1.5rem;
+}
+
 @media (prefers-color-scheme: light) {
   .article img[id^="mermaid"] {
     background: #fafafa;
